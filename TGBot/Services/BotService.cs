@@ -1,11 +1,12 @@
 using System.Globalization;
-using Domain;
+using Application.RProcesses;
 using MediatR;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace TGBot.Services
 {
@@ -14,6 +15,7 @@ namespace TGBot.Services
         private readonly IMediator _mediator;
         private readonly TelegramBotClient _botClient;
         private readonly ReceiverOptions _receiverOptions;
+        private readonly List<UserRequestHandling> _userRequestHandlings;
 
         public BotService(IMediator mediator)
         {
@@ -21,8 +23,9 @@ namespace TGBot.Services
             _botClient = new TelegramBotClient("6616145643:AAGcDgfj23x8wMez9zeiiTXbTEfS9EBM8rk");
             _receiverOptions = new()
             {
-                AllowedUpdates = Array.Empty<UpdateType>() // receive all update types except ChatMember related updates
+                AllowedUpdates = [UpdateType.Message, UpdateType.CallbackQuery]
             };
+            _userRequestHandlings = [];
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -33,25 +36,54 @@ namespace TGBot.Services
                 receiverOptions: _receiverOptions,
                 cancellationToken: stoppingToken
             );
-        }
 
+        }
 
         async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-            // Only process Message updates: https://core.telegram.org/bots/api#message
-            if (update.Message is not { } message)
-                return;
-            // Only process text messages
-            if (message.Text is not { } messageText)
-                return;
+            try
+            {
+                if (update.Type == UpdateType.Message && update.Message.Text != null)
+                {
+                    await HandleMessage(botClient, cancellationToken, update);
+                }
+                if (update.Type == UpdateType.CallbackQuery && update.CallbackQuery != null)
+                {
+                    await HandleCallback(botClient, cancellationToken, update);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
 
-            messageText = messageText.Trim();
+        }
 
-            var chatId = message.Chat.Id;
+        private async Task HandleCallback(ITelegramBotClient botClient, CancellationToken cancellationToken, Update update)
+        {
+            // var callbackQuery = update.CallbackQuery;
+            var callBackData = update.CallbackQuery.Data;
+            var chatId = update.CallbackQuery.Message.Chat.Id;
+            var callbackQueryId = update.CallbackQuery.Id;
             string response = "Command is not supported";
 
+            // if (callBackData == "notepad")
+            // {
+            //     await botClient.SendTextMessageAsync(callbackQueryId, $"Send process name you want to edit");
+            //     return;
+            // }
+            await botClient.AnswerCallbackQueryAsync(callbackQueryId);
+            await botClient.SendTextMessageAsync(chatId, "Send process time boundaries in a format \"00:00:00 - 12:00:00\".\nWhere the first number is a blocker start time, and the second is a blocker end time");
+        }
 
-            if (messageText.StartsWith("Start", true, CultureInfo.CurrentCulture))
+        private async Task HandleMessage(ITelegramBotClient botClient, CancellationToken cancellationToken, Update update)
+        {
+            var messageText = update.Message.Text.Trim();
+
+            var chatId = update.Message.Chat.Id;
+            string response = "Command is not supported";
+
+            if (messageText.StartsWith("/start", true, CultureInfo.CurrentCulture))
             {
                 var result = await _mediator.Send(new Application.Logic.Start.Command());
                 if (result.IsSuccess && result.Value != null)
@@ -64,9 +96,9 @@ namespace TGBot.Services
                 }
                 return;
             }
-            if (messageText.StartsWith("Rules set", true, CultureInfo.CurrentCulture))
+            if (messageText.StartsWith("/rules_set", true, CultureInfo.CurrentCulture))
             {
-                var result = await _mediator.Send(new Application.RProcesses.List.Query());
+                var result = await _mediator.Send(new List.Query());
                 if (result.IsSuccess && result.Value != null)
                 {
                     response = $"{result.Value}";
@@ -77,44 +109,74 @@ namespace TGBot.Services
                 }
                 return;
             }
-            if (messageText.StartsWith("Edit rule", true, CultureInfo.CurrentCulture))
+            if (messageText.StartsWith("/edit_rule", true, CultureInfo.CurrentCulture))
             {
-                response = "Invalid rule data.\nExpected format is:\n\"Edit Rule:ProcessName;BlockStartTime;BlockEndTime\".\nTime should be in the following format: \"00:00:00\"";
+                // response = "Invalid rule data.\nExpected format is:\n\"Edit Rule:ProcessName;BlockStartTime;BlockEndTime\".\nTime should be in the following format: \"00:00:00\"";
+                response = "There no rules to edit";
 
-                var ruleInfo = messageText.Substring(messageText.IndexOf(':') + 1).Split(';');
+                var rprocesses = (await _mediator.Send(new List.Query())).Value;
 
-                if (ruleInfo.Length < 3)
-                    await botClient.SendTextMessageAsync(
-                        chatId: chatId,
-                        text: response,
-                        cancellationToken: cancellationToken);
-                else
+                if (rprocesses == null)
                 {
-                    TimeOnly BlockStartTime;
-                    TimeOnly BlockEndTime;
+                    await _botClient.SendTextMessageAsync(chatId: chatId, text: response);
+                }
 
-                    string processName = ruleInfo[0];
-                    bool startTimeConvRes = TimeOnly.TryParse(ruleInfo[1], out BlockStartTime);
-                    bool endTimeConvRes = TimeOnly.TryParse(ruleInfo[2], out BlockEndTime);
-                    if (string.IsNullOrEmpty(processName) || !startTimeConvRes || !endTimeConvRes)
-                        await botClient.SendTextMessageAsync(
-                             chatId: chatId,
-                             text: response,
-                             cancellationToken: cancellationToken);
+                List<List<InlineKeyboardButton>> buttons = [];
+
+                for (int i = 0, j = 0; i < rprocesses.Count; i++)
+                {
+                    if (i % 2 == 0)
+                    {
+                        buttons.Add(new List<InlineKeyboardButton>() { InlineKeyboardButton.WithCallbackData(rprocesses[i].ProcessName, rprocesses[i].ProcessName) });
+                    }
                     else
                     {
-                        var result = await _mediator.Send(new Application.RProcesses.Edit.Command { Process = new RProcess(processName, BlockStartTime, BlockEndTime) });
-
-                        if (result.IsSuccess && result.Value != null)
-                        {
-                            response = "Rule updated successfully";
-                            await botClient.SendTextMessageAsync(
-                                chatId: chatId,
-                                text: response,
-                                cancellationToken: cancellationToken);
-                        }
+                        buttons[j].Add(InlineKeyboardButton.WithCallbackData(rprocesses[i].ProcessName, rprocesses[i].ProcessName));
+                        j++;
                     }
                 }
+
+                var inlineKeyboard = new InlineKeyboardMarkup(buttons);
+
+                await _botClient.SendTextMessageAsync(chatId, "Choose what to start from", replyMarkup: inlineKeyboard);
+
+                // var ruleInfo = messageText.Substring(messageText.IndexOf(':') + 1).Split(';');
+
+                // if (ruleInfo.Length < 3)
+                //     await botClient.SendTextMessageAsync(
+                //         chatId: chatId,
+                //         text: response,
+                //         cancellationToken: cancellationToken);
+                // else
+                // {
+                //     TimeOnly BlockStartTime;
+                //     TimeOnly BlockEndTime;
+
+                //     string processName = ruleInfo[0];
+                //     bool startTimeConvRes = TimeOnly.TryParse(ruleInfo[1], out BlockStartTime);
+                //     bool endTimeConvRes = TimeOnly.TryParse(ruleInfo[2], out BlockEndTime);
+                //     if (string.IsNullOrEmpty(processName) || !startTimeConvRes || !endTimeConvRes)
+                //         await botClient.SendTextMessageAsync(
+                //              chatId: chatId,
+                //              text: response,
+                //              cancellationToken: cancellationToken);
+                //     else
+                //     {
+                //         var result = await _mediator.Send(new Application.RProcesses.Edit.Command { Process = new RProcess(processName, BlockStartTime, BlockEndTime) });
+
+                //         if (result.IsSuccess && result.Value != null)
+                //         {
+                //             response = "Rule updated successfully";
+                //             await botClient.SendTextMessageAsync(
+                //                 chatId: chatId,
+                //                 text: response,
+                //                 cancellationToken: cancellationToken);
+                //         }
+                //     }
+                // }
+
+
+
                 return;
             }
             else

@@ -1,13 +1,10 @@
 using System.Globalization;
-using Application.RProcesses;
-using Domain;
 using MediatR;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.ReplyMarkups;
 using TGBot.Menus;
 
 namespace TGBot.Services
@@ -84,7 +81,7 @@ namespace TGBot.Services
             {
                 UpdateUserRequests(chatId, baseMenuSection: callBackData, step: 1);
                 await botClient.AnswerCallbackQueryAsync(callbackQueryId);
-                await botClient.EditMessageTextAsync(chatId: chatId, messageId: messageID, text: response, replyMarkup: RProcessesMenuKeyboard());
+                await botClient.EditMessageTextAsync(chatId: chatId, messageId: messageID, text: response, replyMarkup: InlineKeyboards.RProcessesMenuKeyboard());
                 return;
             }
 
@@ -92,7 +89,7 @@ namespace TGBot.Services
             {
                 UpdateUserRequests(chatId, baseMenuSection: callBackData, step: 1);
                 await botClient.AnswerCallbackQueryAsync(callbackQueryId);
-                await botClient.EditMessageTextAsync(chatId: chatId, messageId: messageID, text: response, replyMarkup: ProcessesMenuKeyboard());
+                await botClient.EditMessageTextAsync(chatId: chatId, messageId: messageID, text: response, replyMarkup: InlineKeyboards.ProcessesMenuKeyboard());
                 return;
             }
 
@@ -100,7 +97,7 @@ namespace TGBot.Services
             {
                 UpdateUserRequests(chatId, baseMenuSection: callBackData, step: 1);
                 await botClient.AnswerCallbackQueryAsync(callbackQueryId);
-                await botClient.EditMessageTextAsync(chatId: chatId, messageId: messageID, text: response, replyMarkup: LogicMenuKeyboard());
+                await botClient.EditMessageTextAsync(chatId: chatId, messageId: messageID, text: response, replyMarkup: InlineKeyboards.LogicMenuKeyboard());
                 return;
             }
 
@@ -131,12 +128,42 @@ namespace TGBot.Services
                 }
             }
 
+            //Process menu actions
+            if (_userRequests[chatId].BaseMenuSection == BaseMenu.Process)
+            {
+                if (callBackData == ProcessesMenu.List)
+                {
+                    var result = await _mediator.Send(new Application.Processes.List.Query());
+                    if (!result.IsSuccess && result.Error != null)
+                    {
+                        await botClient.AnswerCallbackQueryAsync(callbackQueryId, result.Error);
+                        return;
+                    }
+                    UpdateUserRequests(chatId, baseMenuSection: _userRequests[chatId].BaseMenuSection, step: 2);
+                    response = "Choose a process:";
+                    await botClient.AnswerCallbackQueryAsync(callbackQueryId);
+                    await botClient.EditMessageTextAsync(
+                        chatId: chatId,
+                        messageId: messageID,
+                        text: response,
+                        replyMarkup: await InlineKeyboards.ListKeyboard(result.Value));
+
+                }
+            }
+
             // Back button actions
             if (callBackData == BaseMenu.Back && _userRequests[chatId].Step == 1)
             {
                 UpdateUserRequests(chatId, baseMenuSection: null, step: 0);
                 await botClient.AnswerCallbackQueryAsync(callbackQueryId);
-                await botClient.EditMessageTextAsync(chatId: chatId, messageId: messageID, text: response, replyMarkup: BaseMenuKeyboard());
+                await botClient.EditMessageTextAsync(chatId: chatId, messageId: messageID, text: response, replyMarkup: InlineKeyboards.BaseMenuKeyboard());
+                return;
+            }
+            if (callBackData == BaseMenu.Back && _userRequests[chatId].Step == 2 && _userRequests[chatId].BaseMenuSection == BaseMenu.Process)
+            {
+                UpdateUserRequests(chatId, step: 1);
+                await botClient.AnswerCallbackQueryAsync(callbackQueryId);
+                await botClient.EditMessageTextAsync(chatId: chatId, messageId: messageID, text: response, replyMarkup: InlineKeyboards.ProcessesMenuKeyboard());
                 return;
             }
             //             var rprocesses = (await _mediator.Send(new List.Query())).Value;
@@ -166,7 +193,7 @@ namespace TGBot.Services
             if (messageText.StartsWith("/menu", true, CultureInfo.CurrentCulture) && username.Equals(_username))
             {
                 UpdateUserRequests(chatId);
-                await _botClient.SendTextMessageAsync(chatId: chatId, text: "Choose an action", replyMarkup: BaseMenuKeyboard());
+                await _botClient.SendTextMessageAsync(chatId: chatId, text: "Choose an action", replyMarkup: InlineKeyboards.BaseMenuKeyboard());
                 return;
             }
             else
@@ -177,92 +204,6 @@ namespace TGBot.Services
                    cancellationToken: cancellationToken);
                 return;
             }
-        }
-
-        private InlineKeyboardMarkup BaseMenuKeyboard()
-        {
-            return new InlineKeyboardMarkup(
-                    new InlineKeyboardButton[][]{
-                    [
-                        InlineKeyboardButton.WithCallbackData(BaseMenu.Logic),
-                        InlineKeyboardButton.WithCallbackData(BaseMenu.RProcess)
-                    ],
-                    [
-                        InlineKeyboardButton.WithCallbackData(BaseMenu.Process)
-                        ]
-                    }
-                );
-        }
-
-        private InlineKeyboardMarkup LogicMenuKeyboard()
-        {
-            return new InlineKeyboardMarkup(
-                    new InlineKeyboardButton[][]{
-                        [
-                            InlineKeyboardButton.WithCallbackData(LogicMenu.Start),
-                            InlineKeyboardButton.WithCallbackData(LogicMenu.Stop)
-                        ],
-                        [
-                            InlineKeyboardButton.WithCallbackData(BaseMenu.Back)
-                        ]
-                    }
-                );
-        }
-
-        private InlineKeyboardMarkup ProcessesMenuKeyboard()
-        {
-            return new InlineKeyboardMarkup(
-                    new InlineKeyboardButton[][]{
-                        [
-                            InlineKeyboardButton.WithCallbackData(ProcessesMenu.List)
-                        ],
-                        [
-                            InlineKeyboardButton.WithCallbackData(BaseMenu.Back)
-                        ]
-                    }
-                );
-        }
-
-        private InlineKeyboardMarkup RProcessesMenuKeyboard()
-        {
-            return new InlineKeyboardMarkup(
-                    new InlineKeyboardButton[][]{
-                        [
-                            InlineKeyboardButton.WithCallbackData(RProcessesMenu.Add),
-                            InlineKeyboardButton.WithCallbackData(RProcessesMenu.List)
-                        ],
-                        [
-                            InlineKeyboardButton.WithCallbackData(RProcessesMenu.EditAll),
-                            InlineKeyboardButton.WithCallbackData(RProcessesMenu.DeleteAll)
-                        ],
-                        [
-                            InlineKeyboardButton.WithCallbackData(BaseMenu.Back)
-                        ]
-                    }
-                );
-        }
-
-        private async Task<InlineKeyboardMarkup> ListKeyboard<T>(List<T> values) where T : INamedProcess
-        {
-            List<List<InlineKeyboardButton>> buttons = [];
-            await Task.Run(() =>
-            {
-                for (int i = 0, j = 0; i < values.Count; i++)
-                {
-                    if (i % 2 == 0)
-                    {
-                        buttons.Add([InlineKeyboardButton.WithCallbackData(values[i].ProcessName)]);
-                    }
-                    else
-                    {
-                        buttons[j].Add(InlineKeyboardButton.WithCallbackData(values[i].ProcessName));
-                        j++;
-                    }
-                }
-
-                buttons.Add([InlineKeyboardButton.WithCallbackData(BaseMenu.Back)]);
-            });
-            return new InlineKeyboardMarkup(buttons);
         }
 
         private void UpdateUserRequests(long chatId, string baseMenuSection = null, int step = 0, string processName = null, string rprocessName = null)

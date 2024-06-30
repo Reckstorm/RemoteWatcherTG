@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Application.Core;
 using MediatR;
 namespace Application.Processes
@@ -14,7 +13,9 @@ namespace Application.Processes
         {
             public async Task<Result<List<ProcessDto>>> Handle(Query request, CancellationToken cancellationToken)
             {
-                return Result<List<ProcessDto>>.Success(await ProcessAgent.GetProcesses());
+                var processes = await ProcessAgent.GetProcesses();
+                if (processes == null) return Result<List<ProcessDto>>.Failure("Failed to get processes");
+                return Result<List<ProcessDto>>.Success(processes);
             }
         }
     }

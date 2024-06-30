@@ -33,15 +33,4 @@ public static class RegistryAgent
         registryKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE", true).CreateSubKey("RemoteWatcher");
         return registryKey;
     }
-
-    // public static async void AddToStartup()
-    // {
-    //     await Task.Run(() =>
-    //     {
-    //         RegistryKey rk = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
-    //         if (rk.GetValue(AppDomain.CurrentDomain.FriendlyName) == null)
-    //             rk.SetValue(AppDomain.CurrentDomain.FriendlyName, $"\"{System.Reflection.Assembly.GetExecutingAssembly().Location}\"");
-    //         rk.Close();
-    //     });
-    // }
 }

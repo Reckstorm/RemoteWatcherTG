@@ -1,6 +1,6 @@
 
 namespace Domain;
-public class RProcess
+public class RProcess: INamedProcess
 {
     public string ProcessName { get; set; }
     private object locker { get; set; } = new object();
@@ -20,6 +20,7 @@ public class RProcess
         get { lock (locker) return _blockEndTime; }
         set { lock (locker) _blockEndTime = value; }
     }
+
 
     public RProcess()
     {

@@ -5,16 +5,16 @@ namespace Application.Processes
 {
     public class List
     {
-        public class Query : IRequest<Result<string>>
+        public class Query : IRequest<Result<List<ProcessDto>>>
         {
 
         }
 
-        public class Handler : IRequestHandler<Query, Result<string>>
+        public class Handler : IRequestHandler<Query, Result<List<ProcessDto>>>
         {
-            public async Task<Result<string>> Handle(Query request, CancellationToken cancellationToken)
+            public async Task<Result<List<ProcessDto>>> Handle(Query request, CancellationToken cancellationToken)
             {
-                return Result<string>.Success(JsonSerializer.Serialize(await ProcessAgent.GetProcesses()));
+                return Result<List<ProcessDto>>.Success(await ProcessAgent.GetProcesses());
             }
         }
     }

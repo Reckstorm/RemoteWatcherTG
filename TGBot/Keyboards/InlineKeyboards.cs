@@ -1,3 +1,4 @@
+using Application.DTOs;
 using Domain;
 using Telegram.Bot.Types.ReplyMarkups;
 using TGBot.Menus;
@@ -30,7 +31,7 @@ namespace TGBot
                             InlineKeyboardButton.WithCallbackData(LogicMenu.Stop)
                         ],
                         [
-                            InlineKeyboardButton.WithCallbackData(LogicMenu.Back)
+                            InlineKeyboardButton.WithCallbackData(CommonMenuItems.BackToBase)
                         ]
                     }
                 );
@@ -44,7 +45,7 @@ namespace TGBot
                             InlineKeyboardButton.WithCallbackData(ProcessesMenu.List)
                         ],
                         [
-                            InlineKeyboardButton.WithCallbackData(ProcessesMenu.Back)
+                            InlineKeyboardButton.WithCallbackData(CommonMenuItems.BackToBase)
                         ]
                     }
                 );
@@ -63,7 +64,7 @@ namespace TGBot
                             InlineKeyboardButton.WithCallbackData(RProcessesMenu.DeleteAll)
                         ],
                         [
-                            InlineKeyboardButton.WithCallbackData(RProcessesMenu.Back)
+                            InlineKeyboardButton.WithCallbackData(CommonMenuItems.BackToBase)
                         ]
                     }
                 );
@@ -77,13 +78,13 @@ namespace TGBot
                             InlineKeyboardButton.WithCallbackData(ProcessMenu.Kill)
                         ],
                         [
-                            InlineKeyboardButton.WithCallbackData(ProcessMenu.Back)
+                            InlineKeyboardButton.WithCallbackData(CommonMenuItems.BackToList)
                         ]
                     }
                 );
         }
 
-        public static async Task<InlineKeyboardMarkup> ListKeyboard(List<string> items, string back)
+        public static async Task<InlineKeyboardMarkup> ListKeyboard(List<CommonProcessDto> items)
         {
             List<List<InlineKeyboardButton>> buttons = [];
             await Task.Run(() =>
@@ -92,16 +93,16 @@ namespace TGBot
                 {
                     if (i % 2 == 0)
                     {
-                        buttons.Add([InlineKeyboardButton.WithCallbackData(items[i])]);
+                        buttons.Add([InlineKeyboardButton.WithCallbackData(items[i].ProcessName)]);
                     }
                     else
                     {
-                        buttons[j].Add(InlineKeyboardButton.WithCallbackData(items[i]));
+                        buttons[j].Add(InlineKeyboardButton.WithCallbackData(items[i].ProcessName));
                         j++;
                     }
                 }
 
-                buttons.Add([InlineKeyboardButton.WithCallbackData(back)]);
+                buttons.Add([InlineKeyboardButton.WithCallbackData(CommonMenuItems.BackToProcesses)]);
             });
             return new InlineKeyboardMarkup(buttons);
         }

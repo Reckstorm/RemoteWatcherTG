@@ -1,6 +1,6 @@
 
 namespace Domain;
-public class RProcess: INamedProcess
+public class RProcess
 {
     public string ProcessName { get; set; }
     private object locker { get; set; } = new object();

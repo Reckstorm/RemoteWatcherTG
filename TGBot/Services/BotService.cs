@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Application.DTOs;
+using Application.RProcesses;
 using Domain;
 using MediatR;
 using Telegram.Bot;
@@ -7,6 +9,7 @@ using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
 using TGBot.Menus;
 
 namespace TGBot.Services
@@ -78,32 +81,26 @@ namespace TGBot.Services
                 return;
             }
 
-            response = "Choose a submenu:";
+            response = "Choose an action";
 
             //Base menu actions
-            if (_userRequests[chatId].BaseMenuSection == null)
+            if (_userRequests[chatId].BaseMenuSection == CommonMenuItems.BackToBase)
             {
                 if (callBackData == BaseMenu.RProcess)
                 {
-                    UpdateUserRequests(chatId, baseMenuSection: callBackData, step: ++_userRequests[chatId].Step);
-                    await botClient.AnswerCallbackQueryAsync(callbackQueryId);
-                    await botClient.EditMessageTextAsync(chatId: chatId, messageId: messageID, text: response, replyMarkup: InlineKeyboards.RProcessesMenuKeyboard());
+                    await HandleSimpleMenuRequest(botClient, update, InlineKeyboards.RProcessesMenuKeyboard(), response, cancellationToken);
                     return;
                 }
 
                 if (callBackData == BaseMenu.Process)
                 {
-                    UpdateUserRequests(chatId, baseMenuSection: callBackData, step: ++_userRequests[chatId].Step);
-                    await botClient.AnswerCallbackQueryAsync(callbackQueryId);
-                    await botClient.EditMessageTextAsync(chatId: chatId, messageId: messageID, text: response, replyMarkup: InlineKeyboards.ProcessesMenuKeyboard());
+                    await HandleSimpleMenuRequest(botClient, update, InlineKeyboards.ProcessesMenuKeyboard(), response, cancellationToken);
                     return;
                 }
 
                 if (callBackData == BaseMenu.Logic)
                 {
-                    UpdateUserRequests(chatId, baseMenuSection: callBackData, step: ++_userRequests[chatId].Step);
-                    await botClient.AnswerCallbackQueryAsync(callbackQueryId);
-                    await botClient.EditMessageTextAsync(chatId: chatId, messageId: messageID, text: response, replyMarkup: InlineKeyboards.LogicMenuKeyboard());
+                    await HandleSimpleMenuRequest(botClient, update, InlineKeyboards.LogicMenuKeyboard(), response, cancellationToken);
                     return;
                 }
             }
@@ -111,34 +108,21 @@ namespace TGBot.Services
             //Logic menu actions
             if (_userRequests[chatId].BaseMenuSection == BaseMenu.Logic)
             {
-                response = "Choose an action";
                 if (callBackData == LogicMenu.Start)
                 {
-                    var result = await _mediator.Send(new Application.Logic.Start.Command());
-                    if (!result.IsSuccess)
-                    {
-                        await botClient.AnswerCallbackQueryAsync(callbackQueryId, result.Error);
-                        return;
-                    }
-                    await botClient.AnswerCallbackQueryAsync(callbackQueryId, "Blocker logic has been started successfully");
+                    await HandleFinalRequest(botClient, update, await _mediator.Send(new Application.Logic.Start.Command()), "Blocker logic has been started successfully", cancellationToken);
                     return;
                 }
+
                 if (callBackData == LogicMenu.Stop)
                 {
-                    var result = await _mediator.Send(new Application.Logic.Stop.Command());
-                    if (!result.IsSuccess)
-                    {
-                        await botClient.AnswerCallbackQueryAsync(callbackQueryId, result.Error);
-                        return;
-                    }
-                    await botClient.AnswerCallbackQueryAsync(callbackQueryId, "Blocker logic has been stopped successfully");
+                    await HandleFinalRequest(botClient, update, await _mediator.Send(new Application.Logic.Stop.Command()), "Blocker logic has been stopped successfully", cancellationToken);
                     return;
                 }
-                if (callBackData == LogicMenu.Back)
+
+                if (callBackData == CommonMenuItems.BackToBase)
                 {
-                    UpdateUserRequests(chatId, baseMenuSection: null);
-                    await botClient.AnswerCallbackQueryAsync(callbackQueryId);
-                    await botClient.EditMessageTextAsync(chatId: chatId, messageId: messageID, text: response, replyMarkup: InlineKeyboards.BaseMenuKeyboard());
+                    await HandleSimpleMenuRequest(botClient, update, InlineKeyboards.BaseMenuKeyboard(), response, cancellationToken);
                     return;
                 }
             }
@@ -149,105 +133,44 @@ namespace TGBot.Services
                 //Send a list of processes
                 if (callBackData == ProcessesMenu.List)
                 {
-                    var result = await _mediator.Send(new Application.Processes.List.Query());
-                    if (!result.IsSuccess && result.Error != null)
-                    {
-                        await botClient.AnswerCallbackQueryAsync(callbackQueryId, result.Error);
-                        return;
-                    }
-                    var items = result.Value.Select(x => x.ProcessName).ToList();
-                    UpdateUserRequests(
-                        chatId: chatId,
-                        baseMenuSection:
-                        _userRequests[chatId].BaseMenuSection,
-                        items: items
-                        );
-                    response = "Choose a process:";
-                    await botClient.AnswerCallbackQueryAsync(callbackQueryId);
-                    await botClient.EditMessageTextAsync(
-                        chatId: chatId,
-                        messageId: messageID,
-                        text: response,
-                        replyMarkup: await InlineKeyboards.ListKeyboard(items, ProcessesListMenu.Back));
+                    await HandleListRequest(botClient, update, await _mediator.Send(new Application.Processes.List.Query()), cancellationToken);
                     return;
                 }
 
                 //Back to base menu
-                if (callBackData == ProcessesMenu.Back)
+                if (callBackData == CommonMenuItems.BackToBase)
                 {
-                    UpdateUserRequests(chatId, baseMenuSection: null);
-                    await botClient.AnswerCallbackQueryAsync(callbackQueryId);
-                    await botClient.EditMessageTextAsync(chatId: chatId, messageId: messageID, text: response, replyMarkup: InlineKeyboards.BaseMenuKeyboard());
+                    await HandleSimpleMenuRequest(botClient, update, InlineKeyboards.BaseMenuKeyboard(), response, cancellationToken);
                     return;
                 }
 
                 //Process menu actions
-                if (_userRequests[chatId].Items.Any(x => x.Equals(callBackData)))
+                if (_userRequests[chatId].Items.Any(x => x.ProcessName.Equals(callBackData)))
                 {
-                    var result = await _mediator.Send(new Application.Processes.Details.Query { ProcessName = callBackData });
-                    if (!result.IsSuccess)
-                    {
-                        await botClient.AnswerCallbackQueryAsync(callbackQueryId, result.Error);
-                        return;
-                    }
-                    UpdateUserRequests(
-                        chatId,
-                        baseMenuSection: _userRequests[chatId].BaseMenuSection,
-                        item: callBackData,
-                        items: _userRequests[chatId].Items);
-                    response = $"Currently chosen process:\nID: {result.Value.ProcessId}\nName: {result.Value.ProcessName}\nStatus: {result.Value.IsRunning}.\nYou can either kill this process with the relevant button below or go back";
-                    await botClient.AnswerCallbackQueryAsync(callbackQueryId);
-                    await botClient.EditMessageTextAsync(
-                        chatId: chatId,
-                        messageId: messageID,
-                        text: response,
-                        replyMarkup: InlineKeyboards.ProcessMenuKeyboard());
+                    await HandleDetailsRequest(botClient, update, await _mediator.Send(new Application.Processes.Details.Query { ProcessName = callBackData }),
+                    InlineKeyboards.ProcessMenuKeyboard(),
+                    "You can either kill this process with the relevant button below or go back", cancellationToken);
                     return;
                 }
 
                 //Back to Processes menu
-                if (callBackData == ProcessesListMenu.Back)
+                if (callBackData == CommonMenuItems.BackToProcesses)
                 {
-                    UpdateUserRequests(chatId, baseMenuSection: _userRequests[chatId].BaseMenuSection);
-                    await botClient.AnswerCallbackQueryAsync(callbackQueryId);
-                    await botClient.EditMessageTextAsync(chatId: chatId, messageId: messageID, text: response, replyMarkup: InlineKeyboards.ProcessesMenuKeyboard());
+                    await HandleSimpleMenuRequest(botClient, update, InlineKeyboards.ProcessesMenuKeyboard(), response, cancellationToken);
                     return;
                 }
 
                 //Specific process actions
                 if (callBackData == ProcessMenu.Kill)
                 {
-                    var result = await _mediator.Send(new Application.Processes.Kill.Command { ProcessName = _userRequests[chatId].Item });
-                    if (!result.IsSuccess)
-                    {
-                        await botClient.AnswerCallbackQueryAsync(callbackQueryId, result.Error);
-                        return;
-                    }
-                    await botClient.AnswerCallbackQueryAsync(callbackQueryId, $"Process {result.Value.ProcessName} successfully killed");
+                    await HandleFinalRequest(botClient, update, await _mediator.Send(new Application.Processes.Kill.Command { ProcessName = _userRequests[chatId].Item }), "Process successfully killed", cancellationToken);
                     return;
                 }
 
                 //Back to Processes list
-                if (callBackData == ProcessMenu.Back)
+                if (callBackData == CommonMenuItems.BackToList)
                 {
-                    var result = await _mediator.Send(new Application.Processes.List.Query());
-                    if (!result.IsSuccess && result.Error != null)
-                    {
-                        await botClient.AnswerCallbackQueryAsync(callbackQueryId, result.Error);
-                        return;
-                    }
-                    var items = result.Value.Select(x => x.ProcessName).ToList();
-                    UpdateUserRequests(
-                        chatId: chatId,
-                        baseMenuSection: _userRequests[chatId].BaseMenuSection,
-                        items: items);
-                    response = "Choose a process:";
-                    await botClient.AnswerCallbackQueryAsync(callbackQueryId);
-                    await botClient.EditMessageTextAsync(
-                        chatId: chatId,
-                        messageId: messageID,
-                        text: response,
-                        replyMarkup: await InlineKeyboards.ListKeyboard(items, ProcessesListMenu.Back));
+                    await HandleListRequest(botClient, update, await _mediator.Send(new Application.Processes.List.Query()), cancellationToken);
                     return;
                 }
             }
@@ -255,69 +178,42 @@ namespace TGBot.Services
             //RProcesses menu actions
             if (_userRequests[chatId].BaseMenuSection == BaseMenu.RProcess)
             {
-                response = "Choose an action";
-
                 if (callBackData == RProcessesMenu.Add)
                 {
-                    UpdateUserRequests(chatId: chatId, baseMenuSection: BaseMenu.RProcess, step: 1);
-                    await botClient.AnswerCallbackQueryAsync(callbackQueryId);
-                    await botClient.SendTextMessageAsync(chatId: chatId,
-                        text: "Provide a process name in a form of \"Name: ProcessName\"\nWithout quotes!\nIn case you want to cancell this action send /cancell");
-                    return;
-                }
-
-                if (callBackData == RProcessesMenu.List)
-                {
-                    var result = await _mediator.Send(new Application.RProcesses.List.Query());
-                    if (result == null)
-                    {
-                        await botClient.AnswerCallbackQueryAsync(callbackQueryId, "There are no rules to display");
-                        return;
-                    }
-                    if (!result.IsSuccess && result.Error != null)
-                    {
-                        await botClient.AnswerCallbackQueryAsync(callbackQueryId, result.Error);
-                        return;
-                    }
-                    var items = result.Value.Select(x => x.ProcessName).ToList();
-                    UpdateUserRequests(chatId: chatId,
-                        baseMenuSection: _userRequests[chatId].BaseMenuSection,
-                        items: items);
-                    response = "Choose a process:";
-                    await botClient.AnswerCallbackQueryAsync(callbackQueryId);
-                    await botClient.EditMessageTextAsync(
-                        chatId: chatId,
-                        messageId: messageID,
-                        text: response,
-                        replyMarkup: await InlineKeyboards.ListKeyboard(items, RProcessesListMenu.Back));
+                    response = "Provide a process name in a form of \"Name: ProcessName\"\nWithout quotes!\nIn case you want to cancell simply send /menu to start the flow over";
+                    await HandleMenuRequestWithTextResponse(botClient, update, response, cancellationToken);
                     return;
                 }
 
                 if (callBackData == RProcessesMenu.EditAll)
                 {
-                    await botClient.AnswerCallbackQueryAsync(callbackQueryId);
+                    response = "Send time boundaries that are to be set for all of the rules in a format:\n\"Boundaries: 00:00:00-00:00:00\"\nIn case you want to cancell simply send /menu to start the flow over";
+                    await HandleMenuRequestWithTextResponse(botClient, update, response, cancellationToken);
                     return;
                 }
 
                 if (callBackData == RProcessesMenu.DeleteAll)
                 {
-                    var result = await _mediator.Send(new Application.RProcesses.DeleteAll.Command());
-                    if (!result.IsSuccess && result.Error != null)
-                    {
-                        await botClient.AnswerCallbackQueryAsync(callbackQueryId, result.Error);
-                        return;
-                    }
-                    UpdateUserRequests(chatId: chatId,
-                        baseMenuSection: _userRequests[chatId].BaseMenuSection);
-                    await botClient.AnswerCallbackQueryAsync(callbackQueryId, "All have been rules successfully deleted");
+                    await HandleFinalRequest(botClient, update, await _mediator.Send(new DeleteAll.Command()), "All have been rules successfully deleted", cancellationToken);
                     return;
                 }
 
-                if (callBackData == RProcessesMenu.Back)
+                if (callBackData == CommonMenuItems.BackToBase)
                 {
-                    UpdateUserRequests(chatId, baseMenuSection: null);
-                    await botClient.AnswerCallbackQueryAsync(callbackQueryId);
-                    await botClient.EditMessageTextAsync(chatId: chatId, messageId: messageID, text: response, replyMarkup: InlineKeyboards.BaseMenuKeyboard());
+                    await HandleSimpleMenuRequest(botClient, update, InlineKeyboards.BaseMenuKeyboard(), response, cancellationToken);
+                    return;
+                }
+
+                if (callBackData == RProcessesMenu.List)
+                {
+                    await HandleListRequest(botClient, update, await _mediator.Send(new List.Query()), cancellationToken);
+                    return;
+                }
+
+                //Back to RProcesses menu
+                if (callBackData == CommonMenuItems.BackToProcesses)
+                {
+                    await HandleSimpleMenuRequest(botClient, update, InlineKeyboards.RProcessesMenuKeyboard(), response, cancellationToken);
                     return;
                 }
             }
@@ -332,13 +228,14 @@ namespace TGBot.Services
 
             if (messageText.StartsWith("/menu", true, CultureInfo.CurrentCulture))
             {
-                UpdateUserRequests(chatId);
-                await _botClient.SendTextMessageAsync(chatId: chatId, text: "Choose an action", replyMarkup: InlineKeyboards.BaseMenuKeyboard());
+                response = "Choose an action";
+                UpdateUserRequests(chatId, baseMenuSection: CommonMenuItems.BackToBase);
+                await _botClient.SendTextMessageAsync(chatId: chatId, text: response, replyMarkup: InlineKeyboards.BaseMenuKeyboard());
                 return;
             }
-            if (_userRequests[chatId].BaseMenuSection == BaseMenu.RProcess)
+            else if (_userRequests[chatId].BaseMenuSection == BaseMenu.RProcess)
             {
-                if (Regex.Match(messageText, "Name: .+").Success)
+                if (CheckName(messageText))
                 {
                     var name = messageText.Split(' ')[1];
                     _userRequests[chatId].RProcess = new RProcess
@@ -349,14 +246,41 @@ namespace TGBot.Services
                         text: "Success!\nSend time boundaries in a format:\n\"Boundaries: 00:00:00-00:00:00\"");
                     return;
                 }
-                else if (Regex.Match(messageText, "Boundaries: (0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]-(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]").Success)
+                else if (CheckBoundaries(messageText) && _userRequests[chatId].RProcess != null)
                 {
                     var boundaries = messageText.Split(' ')[1].Split('-');
                     _userRequests[chatId].RProcess.BlockStartTime = TimeOnly.Parse(boundaries[0]);
                     _userRequests[chatId].RProcess.BlockStartTime = TimeOnly.Parse(boundaries[1]);
 
-                    var result = await _mediator.Send(new Application.RProcesses.Add.Command { Process = _userRequests[chatId].RProcess });
+                    var result = await _mediator.Send(new Add.Command { Process = _userRequests[chatId].RProcess });
 
+                    if (!result.IsSuccess && result.Error != null)
+                    {
+                        await _botClient.SendTextMessageAsync(chatId: chatId,
+                        text: $"{result.Error}.");
+                        return;
+                    }
+
+                    _userRequests[chatId].RProcess = null;
+
+                    await _botClient.SendTextMessageAsync(chatId: chatId,
+                        text: "Success!\nChanges are applied right away, you don't need to restart blocker if it is running");
+                    return;
+                }
+                else if (CheckBoundaries(messageText) && _userRequests[chatId].RProcess == null)
+                {
+                    var boundaries = messageText.Split(' ')[1].Split('-');
+                    var start = TimeOnly.Parse(boundaries[0]);
+                    var end = TimeOnly.Parse(boundaries[1]);
+
+                    var result = await _mediator.Send(new EditAll.Command { Boundaries = new RProcessDTO { StartTime = start, EndTime = end } });
+
+                    if (result == null)
+                    {
+                        await _botClient.SendTextMessageAsync(chatId: chatId,
+                        text: $"Error.\nSend time boundaries in a format:\n\"Boundaries: 00:00:00-00:00:00\"");
+                        return;
+                    }
                     if (!result.IsSuccess && result.Error != null)
                     {
                         await _botClient.SendTextMessageAsync(chatId: chatId,
@@ -364,16 +288,13 @@ namespace TGBot.Services
                         return;
                     }
 
-                    _userRequests[chatId].RProcess = null;
-
                     await _botClient.SendTextMessageAsync(chatId: chatId,
-                        text: "Success!\nChanges are applied right away, you don't need to restart blocker",
+                        text: "Success!\nChanges are applied right away, you don't need to restart blocker if it is running",
                         replyMarkup: InlineKeyboards.RProcessesMenuKeyboard());
                     return;
                 }
                 await _botClient.SendTextMessageAsync(chatId: chatId,
-                        text: "Failed to add data.\nTry again according to the provided formats",
-                        replyMarkup: InlineKeyboards.RProcessesMenuKeyboard());
+                        text: "Failed to add data.\nTry again according to the provided formats");
                 return;
             }
             else
@@ -386,11 +307,118 @@ namespace TGBot.Services
             }
         }
 
-        private void UpdateUserRequests(long chatId, string baseMenuSection = null, int step = 0, string item = null, List<string> items = null)
+        private bool CheckBoundaries(string text)
+        {
+            return Regex.Match(text, "Boundaries: (0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]-(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]").Success;
+        }
+
+        private bool CheckName(string text)
+        {
+            return Regex.Match(text, "Name: .+").Success;
+        }
+
+        private async Task HandleMenuRequestWithTextResponse(ITelegramBotClient botClient, Update update, string response, CancellationToken cancellationToken)
+        {
+            var chatId = update.CallbackQuery.Message.Chat.Id;
+            UpdateUserRequests(chatId: chatId, baseMenuSection: BaseMenu.RProcess);
+            await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
+            await botClient.SendTextMessageAsync(chatId: chatId,
+                text: response);
+            return;
+        }
+
+        private async Task HandleSimpleMenuRequest(ITelegramBotClient botClient, Update update, InlineKeyboardMarkup markup, string response, CancellationToken cancellationToken)
+        {
+            var chatId = update.CallbackQuery.Message.Chat.Id;
+            UpdateUserRequests(chatId: chatId, baseMenuSection: update.CallbackQuery.Data);
+            await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
+            await botClient.EditMessageTextAsync(chatId: chatId, messageId: update.CallbackQuery.Message.MessageId, text: response, replyMarkup: markup);
+            return;
+        }
+
+        private async Task HandleFinalRequest<T>(ITelegramBotClient botClient, Update update, Result<T> result, string response, CancellationToken cancellationToken)
+        {
+            var chatId = update.CallbackQuery.Message.Chat.Id;
+            var callbackQueryId = update.CallbackQuery.Id;
+            if (result == null)
+            {
+                await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, "Failed to process command");
+                return;
+            }
+            if (!result.IsSuccess && result.Error != null)
+            {
+                await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, result.Error);
+                return;
+            }
+            UpdateUserRequests(chatId: chatId,
+                baseMenuSection: _userRequests[chatId].BaseMenuSection);
+            await botClient.AnswerCallbackQueryAsync(callbackQueryId, response);
+            return;
+        }
+
+        private async Task HandleListRequest<T>(ITelegramBotClient botClient, Update update, Result<T> result, CancellationToken cancellationToken) where T : List<CommonProcessDto>
+        {
+            var chatId = update.CallbackQuery.Message.Chat.Id;
+            var callbackQueryId = update.CallbackQuery.Id;
+            if (result == null)
+            {
+                await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, "Failed to process command");
+                return;
+            }
+            if (!result.IsSuccess && result.Error != null)
+            {
+                await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, result.Error);
+                return;
+            }
+
+            UpdateUserRequests(
+                chatId: chatId,
+                baseMenuSection: _userRequests[chatId].BaseMenuSection,
+                items: result.Value);
+            await botClient.AnswerCallbackQueryAsync(callbackQueryId);
+            await botClient.EditMessageTextAsync(
+                chatId: chatId,
+                messageId: update.CallbackQuery.Message.MessageId,
+                text: "Choose a process:",
+                replyMarkup: await InlineKeyboards.ListKeyboard(result.Value));
+            return;
+        }
+
+        private async Task HandleDetailsRequest(ITelegramBotClient botClient, Update update, Result<CommonProcessDto> result, InlineKeyboardMarkup markup, string response, CancellationToken cancellationToken)
+        {
+            var chatId = update.CallbackQuery.Message.Chat.Id;
+            var callbackQueryId = update.CallbackQuery.Id;
+            if (result == null)
+            {
+                await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, "Failed to process command");
+                return;
+            }
+            if (!result.IsSuccess && result.Error != null)
+            {
+                await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, result.Error);
+                return;
+            }
+
+            UpdateUserRequests(
+                chatId,
+                baseMenuSection: _userRequests[chatId].BaseMenuSection,
+                item: update.CallbackQuery.Data,
+                items: _userRequests[chatId].Items);
+
+            await botClient.AnswerCallbackQueryAsync(callbackQueryId);
+
+            await botClient.EditMessageTextAsync(
+                chatId: chatId,
+                messageId: update.CallbackQuery.Message.MessageId,
+                text: $"Currently chosen process:\nName: {result.Value.ProcessName}\n{response}",
+                replyMarkup: markup);
+            return;
+        }
+
+        private void UpdateUserRequests(long chatId, string baseMenuSection = null, string item = null, List<CommonProcessDto> items = null)
         {
             if (_userRequests.ContainsKey(chatId))
             {
-                _userRequests[chatId].Step = step;
                 _userRequests[chatId].BaseMenuSection = baseMenuSection;
                 _userRequests[chatId].Item = item;
                 _userRequests[chatId].Items = items;

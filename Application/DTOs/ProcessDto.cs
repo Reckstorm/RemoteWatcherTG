@@ -1,8 +1,6 @@
-using Domain;
-
 namespace Application.Processes;
 
-public class ProcessDto: INamedProcess
+public class ProcessDto
 {
     public string ProcessName { get; set; }
     public int ProcessId { get; set;} = -1;

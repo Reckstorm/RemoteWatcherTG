@@ -183,6 +183,27 @@ namespace TGBot.Services
                     return;
                 }
 
+                if (_userRequests[chatId].RProcess != null &&
+                    _userRequests[chatId].RProcess.BlockStartTime == TimeOnly.MaxValue &&
+                    TimeMenu.TimeOptions.Any(x => x.Equals(callBackData)))
+                {
+                    response = "Select blocker end time";
+                    _userRequests[chatId].RProcess.BlockStartTime = TimeOnly.Parse(callBackData);
+                    await _botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
+                    await _botClient.SendTextMessageAsync(chatId: chatId, text: response, replyMarkup: await InlineKeyboards.ListKeyboard());
+                    return;
+                }
+
+                if (_userRequests[chatId].RProcess.BlockStartTime != TimeOnly.MaxValue &&
+                    TimeMenu.TimeOptions.Any(x => x.Equals(callBackData)))
+                {
+                    response = "New rule successfully added";
+                    _userRequests[chatId].RProcess.BlockEndTime = TimeOnly.Parse(callBackData);
+                    await HandleFinalRequest(_botClient, update, await _mediator.Send(new Application.RProcesses.Add.Command { Process = _userRequests[chatId].RProcess }),
+                        response, cancellationToken);
+                    return;
+                }
+
                 if (callBackData == RProcessesMenu.EditAll)
                 {
                     response = "Send time boundaries that are to be set for all of the rules in a format:\n\"Boundaries: 00:00:00-00:00:00\"\nIn case you want to cancell simply send /menu to start the flow over";
@@ -216,6 +237,14 @@ namespace TGBot.Services
                     return;
                 }
 
+                //Back to RProcesses menu
+                if (callBackData == CommonMenuItems.BackToProcesses)
+                {
+                    await HandleSimpleMenuRequest(botClient, update, InlineKeyboards.RProcessesMenuKeyboard(), response, cancellationToken);
+                    return;
+                }
+
+
                 // if (callBackData == RProcessMenu.EditName)
                 // {
                 //     response = "Provide a process name in a form of \"Name: ProcessName\"\nWithout quotes!\nIn case you want to cancell simply send /menu to start the flow over";
@@ -232,13 +261,6 @@ namespace TGBot.Services
                 if (callBackData == CommonMenuItems.BackToList)
                 {
                     await HandleListRequest(botClient, update, await _mediator.Send(new Application.RProcesses.List.Query()), cancellationToken);
-                    return;
-                }
-
-                //Back to RProcesses menu
-                if (callBackData == CommonMenuItems.BackToProcesses)
-                {
-                    await HandleSimpleMenuRequest(botClient, update, InlineKeyboards.RProcessesMenuKeyboard(), response, cancellationToken);
                     return;
                 }
             }

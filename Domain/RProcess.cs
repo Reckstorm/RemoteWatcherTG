@@ -24,15 +24,15 @@ public class RProcess
 
     public RProcess()
     {
-        BlockStartTime = TimeOnly.Parse("00:00:00");
-        BlockEndTime = TimeOnly.Parse("23:59:59");
+        BlockStartTime = TimeOnly.MaxValue;
+        BlockEndTime = TimeOnly.MaxValue;
         ProcessName = string.Empty;
     }
 
     public RProcess(string proc)
     {
-        BlockStartTime = TimeOnly.Parse("00:00:00");
-        BlockEndTime = TimeOnly.Parse("23:59:59");
+        BlockStartTime = TimeOnly.MaxValue;
+        BlockEndTime = TimeOnly.MaxValue;
         ProcessName = proc;
     }
 

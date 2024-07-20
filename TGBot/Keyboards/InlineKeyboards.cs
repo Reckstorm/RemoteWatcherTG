@@ -17,7 +17,7 @@ namespace TGBot
                     ],
                     [
                         InlineKeyboardButton.WithCallbackData(BaseMenu.Process)
-                        ]
+                    ]
                     }
                 );
         }
@@ -84,24 +84,65 @@ namespace TGBot
                 );
         }
 
+        public static InlineKeyboardMarkup RProcessMenuKeyboard()
+        {
+            return new InlineKeyboardMarkup(
+                    new InlineKeyboardButton[][]{
+                        [
+                            InlineKeyboardButton.WithCallbackData(RProcessMenu.EditName),
+                            InlineKeyboardButton.WithCallbackData(RProcessMenu.EditTime)
+                        ],
+                        [
+                            InlineKeyboardButton.WithCallbackData(RProcessMenu.Delete)
+                        ],
+                        [
+                            InlineKeyboardButton.WithCallbackData(CommonMenuItems.BackToList)
+                        ]
+                    }
+                );
+        }
+
         public static async Task<InlineKeyboardMarkup> ListKeyboard(List<CommonProcessDto> items)
         {
+            int rowItemsCount = 4;
             List<List<InlineKeyboardButton>> buttons = [];
             await Task.Run(() =>
             {
-                for (int i = 0, j = 0; i < items.Count; i++)
+                foreach (var item in items)
                 {
-                    if (i % 2 == 0)
+                    int i = items.IndexOf(item);
+                    if (i == 0 || i % rowItemsCount == 0)
                     {
-                        buttons.Add([InlineKeyboardButton.WithCallbackData(items[i].ProcessName)]);
+                        buttons.Add([InlineKeyboardButton.WithCallbackData(item.ProcessName)]);
                     }
                     else
                     {
-                        buttons[j].Add(InlineKeyboardButton.WithCallbackData(items[i].ProcessName));
-                        j++;
+                        buttons.Last().Add(InlineKeyboardButton.WithCallbackData(item.ProcessName));
                     }
                 }
+                buttons.Add([InlineKeyboardButton.WithCallbackData(CommonMenuItems.BackToProcesses)]);
+            });
+            return new InlineKeyboardMarkup(buttons);
+        }
 
+        public static async Task<InlineKeyboardMarkup> ListKeyboard()
+        {
+            int rowItemsCount = 4;
+            List<List<InlineKeyboardButton>> buttons = [];
+            await Task.Run(() =>
+            {
+                foreach (var item in TimeMenu.TimeOptions)
+                {
+                    int i = TimeMenu.TimeOptions.IndexOf(item);
+                    if (i == 0 || i % rowItemsCount == 0)
+                    {
+                        buttons.Add([InlineKeyboardButton.WithCallbackData(item)]);
+                    }
+                    else
+                    {
+                        buttons.Last().Add(InlineKeyboardButton.WithCallbackData(item));
+                    }
+                }
                 buttons.Add([InlineKeyboardButton.WithCallbackData(CommonMenuItems.BackToProcesses)]);
             });
             return new InlineKeyboardMarkup(buttons);

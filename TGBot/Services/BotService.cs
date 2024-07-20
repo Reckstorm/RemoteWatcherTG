@@ -16,15 +16,15 @@ namespace TGBot.Services
 {
     public class BotService : BackgroundService
     {
-        private string _username { get; set; }
         private readonly IMediator _mediator;
         private readonly TelegramBotClient _botClient;
         private readonly ReceiverOptions _receiverOptions;
         private readonly Dictionary<long, UserRequest> _userRequests;
+        public IConfiguration _configuration { get; }
 
-        public BotService(IMediator mediator)
+        public BotService(IMediator mediator, IConfiguration configuration)
         {
-            _username = "reckstorm";
+            _configuration = configuration;
             _mediator = mediator;
             _botClient = new TelegramBotClient("6616145643:AAGcDgfj23x8wMez9zeiiTXbTEfS9EBM8rk");
             _receiverOptions = new()
@@ -71,8 +71,6 @@ namespace TGBot.Services
         {
             var callBackData = update.CallbackQuery.Data;
             var chatId = update.CallbackQuery.Message.Chat.Id;
-            var callbackQueryId = update.CallbackQuery.Id;
-            var messageID = update.CallbackQuery.Message.MessageId;
             string response = "Invalid command";
 
             if (callBackData == null)
@@ -145,7 +143,7 @@ namespace TGBot.Services
                 }
 
                 //Process menu actions
-                if (_userRequests[chatId].Items.Any(x => x.ProcessName.Equals(callBackData)))
+                if (_userRequests[chatId].Items != null && _userRequests[chatId].Items.Any(x => x.ProcessName.Equals(callBackData)))
                 {
                     await HandleDetailsRequest(botClient, update, await _mediator.Send(new Application.Processes.Details.Query { ProcessName = callBackData }),
                     InlineKeyboards.ProcessMenuKeyboard(),
@@ -210,6 +208,33 @@ namespace TGBot.Services
                     return;
                 }
 
+                if (_userRequests[chatId].Items != null && _userRequests[chatId].Items.Any(x => x.ProcessName.Equals(callBackData)))
+                {
+                    await HandleDetailsRequest(botClient, update, await _mediator.Send(new Application.RProcesses.Details.Query { ProcessName = callBackData }),
+                    InlineKeyboards.RProcessMenuKeyboard(),
+                    "Choose an action towards the process", cancellationToken);
+                    return;
+                }
+
+                // if (callBackData == RProcessMenu.EditName)
+                // {
+                //     response = "Provide a process name in a form of \"Name: ProcessName\"\nWithout quotes!\nIn case you want to cancell simply send /menu to start the flow over";
+                //     await HandleMenuRequestWithTextResponse(botClient, update, response, cancellationToken);
+                //     return;
+                // }
+
+                if (callBackData == RProcessMenu.Delete)
+                {
+                    await HandleFinalRequest(botClient, update, await _mediator.Send(new Delete.Command() { ProcessName = _userRequests[chatId].Item }), "Process have been removed successfully", cancellationToken);
+                    return;
+                }
+
+                if (callBackData == CommonMenuItems.BackToList)
+                {
+                    await HandleListRequest(botClient, update, await _mediator.Send(new Application.RProcesses.List.Query()), cancellationToken);
+                    return;
+                }
+
                 //Back to RProcesses menu
                 if (callBackData == CommonMenuItems.BackToProcesses)
                 {
@@ -226,7 +251,7 @@ namespace TGBot.Services
             var chatId = update.Message.Chat.Id;
             string response = "Invalid command";
 
-            if (messageText.StartsWith("/menu", true, CultureInfo.CurrentCulture))
+            if (username == _configuration["BotAdminUsername"] && messageText.StartsWith("/menu", true, CultureInfo.CurrentCulture))
             {
                 response = "Choose an action";
                 UpdateUserRequests(chatId, baseMenuSection: CommonMenuItems.BackToBase);
@@ -237,62 +262,63 @@ namespace TGBot.Services
             {
                 if (CheckName(messageText))
                 {
+                    response = "Select blocker start time";
                     var name = messageText.Split(' ')[1];
                     _userRequests[chatId].RProcess = new RProcess
                     {
                         ProcessName = name
                     };
                     await _botClient.SendTextMessageAsync(chatId: chatId,
-                        text: "Success!\nSend time boundaries in a format:\n\"Boundaries: 00:00:00-00:00:00\"");
+                        text: response, replyMarkup: await InlineKeyboards.ListKeyboard());
                     return;
                 }
-                else if (CheckBoundaries(messageText) && _userRequests[chatId].RProcess != null)
-                {
-                    var boundaries = messageText.Split(' ')[1].Split('-');
-                    _userRequests[chatId].RProcess.BlockStartTime = TimeOnly.Parse(boundaries[0]);
-                    _userRequests[chatId].RProcess.BlockStartTime = TimeOnly.Parse(boundaries[1]);
+                // else if (CheckBoundaries(messageText) && _userRequests[chatId].RProcess != null)
+                // {
+                //     var boundaries = messageText.Split(' ')[1].Split('-');
+                //     _userRequests[chatId].RProcess.BlockStartTime = TimeOnly.Parse(boundaries[0]);
+                //     _userRequests[chatId].RProcess.BlockStartTime = TimeOnly.Parse(boundaries[1]);
 
-                    var result = await _mediator.Send(new Add.Command { Process = _userRequests[chatId].RProcess });
+                //     var result = await _mediator.Send(new Add.Command { Process = _userRequests[chatId].RProcess });
 
-                    if (!result.IsSuccess && result.Error != null)
-                    {
-                        await _botClient.SendTextMessageAsync(chatId: chatId,
-                        text: $"{result.Error}.");
-                        return;
-                    }
+                //     if (!result.IsSuccess && result.Error != null)
+                //     {
+                //         await _botClient.SendTextMessageAsync(chatId: chatId,
+                //         text: $"{result.Error}.");
+                //         return;
+                //     }
 
-                    _userRequests[chatId].RProcess = null;
+                //     _userRequests[chatId].RProcess = null;
 
-                    await _botClient.SendTextMessageAsync(chatId: chatId,
-                        text: "Success!\nChanges are applied right away, you don't need to restart blocker if it is running");
-                    return;
-                }
-                else if (CheckBoundaries(messageText) && _userRequests[chatId].RProcess == null)
-                {
-                    var boundaries = messageText.Split(' ')[1].Split('-');
-                    var start = TimeOnly.Parse(boundaries[0]);
-                    var end = TimeOnly.Parse(boundaries[1]);
+                //     await _botClient.SendTextMessageAsync(chatId: chatId,
+                //         text: "Success!\nChanges are applied right away, you don't need to restart blocker if it is running");
+                //     return;
+                // }
+                // else if (CheckBoundaries(messageText) && _userRequests[chatId].RProcess == null)
+                // {
+                //     var boundaries = messageText.Split(' ')[1].Split('-');
+                //     var start = TimeOnly.Parse(boundaries[0]);
+                //     var end = TimeOnly.Parse(boundaries[1]);
 
-                    var result = await _mediator.Send(new EditAll.Command { Boundaries = new RProcessDTO { StartTime = start, EndTime = end } });
+                //     var result = await _mediator.Send(new EditAll.Command { Boundaries = new RProcessDTO { StartTime = start, EndTime = end } });
 
-                    if (result == null)
-                    {
-                        await _botClient.SendTextMessageAsync(chatId: chatId,
-                        text: $"Error.\nSend time boundaries in a format:\n\"Boundaries: 00:00:00-00:00:00\"");
-                        return;
-                    }
-                    if (!result.IsSuccess && result.Error != null)
-                    {
-                        await _botClient.SendTextMessageAsync(chatId: chatId,
-                        text: $"{result.Error}.\nSend time boundaries in a format:\n\"Boundaries: 00:00:00-00:00:00\"");
-                        return;
-                    }
+                //     if (result == null)
+                //     {
+                //         await _botClient.SendTextMessageAsync(chatId: chatId,
+                //         text: $"Error.\nSend time boundaries in a format:\n\"Boundaries: 00:00:00-00:00:00\"");
+                //         return;
+                //     }
+                //     if (!result.IsSuccess && result.Error != null)
+                //     {
+                //         await _botClient.SendTextMessageAsync(chatId: chatId,
+                //         text: $"{result.Error}.\nSend time boundaries in a format:\n\"Boundaries: 00:00:00-00:00:00\"");
+                //         return;
+                //     }
 
-                    await _botClient.SendTextMessageAsync(chatId: chatId,
-                        text: "Success!\nChanges are applied right away, you don't need to restart blocker if it is running",
-                        replyMarkup: InlineKeyboards.RProcessesMenuKeyboard());
-                    return;
-                }
+                //     await _botClient.SendTextMessageAsync(chatId: chatId,
+                //         text: "Success!\nChanges are applied right away, you don't need to restart blocker if it is running",
+                //         replyMarkup: InlineKeyboards.RProcessesMenuKeyboard());
+                //     return;
+                // }
                 await _botClient.SendTextMessageAsync(chatId: chatId,
                         text: "Failed to add data.\nTry again according to the provided formats");
                 return;

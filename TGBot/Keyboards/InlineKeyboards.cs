@@ -108,16 +108,15 @@ namespace TGBot
             List<List<InlineKeyboardButton>> buttons = [];
             await Task.Run(() =>
             {
-                foreach (var item in items)
+                for (int i = 0; i < items.Count; i++)
                 {
-                    int i = items.IndexOf(item);
                     if (i == 0 || i % rowItemsCount == 0)
                     {
-                        buttons.Add([InlineKeyboardButton.WithCallbackData(item.ProcessName)]);
+                        buttons.Add([InlineKeyboardButton.WithCallbackData(items[i].ProcessName)]);
                     }
                     else
                     {
-                        buttons.Last().Add(InlineKeyboardButton.WithCallbackData(item.ProcessName));
+                        buttons.Last().Add(InlineKeyboardButton.WithCallbackData(items[i].ProcessName));
                     }
                 }
                 buttons.Add([InlineKeyboardButton.WithCallbackData(CommonMenuItems.BackToProcesses)]);
@@ -131,16 +130,15 @@ namespace TGBot
             List<List<InlineKeyboardButton>> buttons = [];
             await Task.Run(() =>
             {
-                foreach (var item in TimeMenu.TimeOptions)
+                for (int i = 0; i < TimeMenu.TimeOptions.Count; i++)
                 {
-                    int i = TimeMenu.TimeOptions.IndexOf(item);
                     if (i == 0 || i % rowItemsCount == 0)
                     {
-                        buttons.Add([InlineKeyboardButton.WithCallbackData(item)]);
+                        buttons.Add([InlineKeyboardButton.WithCallbackData(TimeMenu.TimeOptions[i])]);
                     }
                     else
                     {
-                        buttons.Last().Add(InlineKeyboardButton.WithCallbackData(item));
+                        buttons.Last().Add(InlineKeyboardButton.WithCallbackData(TimeMenu.TimeOptions[i]));
                     }
                 }
                 buttons.Add([InlineKeyboardButton.WithCallbackData(CommonMenuItems.BackToProcesses)]);

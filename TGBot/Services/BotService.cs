@@ -19,7 +19,7 @@ namespace TGBot.Services
         private readonly IMediator _mediator;
         private readonly TelegramBotClient _botClient;
         private readonly ReceiverOptions _receiverOptions;
-        private readonly Dictionary<long, UserRequest> _userRequests;
+        private readonly UserRequest _userRequest;
         public IConfiguration _configuration { get; }
 
         public BotService(IMediator mediator, IConfiguration configuration)
@@ -31,7 +31,7 @@ namespace TGBot.Services
             {
                 AllowedUpdates = [UpdateType.Message, UpdateType.CallbackQuery]
             };
-            _userRequests = [];
+            _userRequest = new UserRequest();
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -47,24 +47,21 @@ namespace TGBot.Services
 
         async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-            await Task.Run(async () =>
+            try
             {
-                try
+                if (update.Type == UpdateType.Message && update.Message.Text != null)
                 {
-                    if (update.Type == UpdateType.Message && update.Message.Text != null)
-                    {
-                        await HandleMessage(botClient, cancellationToken, update);
-                    }
-                    if (update.Type == UpdateType.CallbackQuery && update.CallbackQuery != null)
-                    {
-                        await HandleCallback(botClient, cancellationToken, update);
-                    }
+                    await HandleMessage(botClient, cancellationToken, update);
                 }
-                catch (Exception ex)
+                if (update.Type == UpdateType.CallbackQuery && update.CallbackQuery != null)
                 {
-                    Console.WriteLine(ex.Message);
+                    await HandleCallback(botClient, cancellationToken, update);
                 }
-            });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
         }
 
         private async Task HandleCallback(ITelegramBotClient botClient, CancellationToken cancellationToken, Update update)
@@ -82,7 +79,7 @@ namespace TGBot.Services
             response = "Choose an action";
 
             //Base menu actions
-            if (_userRequests[chatId].BaseMenuSection == CommonMenuItems.BackToBase)
+            if (_userRequest.BaseMenuSection == CommonMenuItems.BackToBase)
             {
                 if (callBackData == BaseMenu.RProcess)
                 {
@@ -104,7 +101,7 @@ namespace TGBot.Services
             }
 
             //Logic menu actions
-            if (_userRequests[chatId].BaseMenuSection == BaseMenu.Logic)
+            if (_userRequest.BaseMenuSection == BaseMenu.Logic)
             {
                 if (callBackData == LogicMenu.Start)
                 {
@@ -127,7 +124,7 @@ namespace TGBot.Services
             }
 
             //Processes menu actions
-            if (_userRequests[chatId].BaseMenuSection == BaseMenu.Process)
+            if (_userRequest.BaseMenuSection == BaseMenu.Process)
             {
                 //Send a list of processes
                 if (callBackData == ProcessesMenu.List)
@@ -144,7 +141,7 @@ namespace TGBot.Services
                 }
 
                 //Process menu actions
-                if (_userRequests[chatId].Items != null && _userRequests[chatId].Items.Any(x => x.ProcessName.Equals(callBackData)))
+                if (_userRequest.Items != null && _userRequest.Items.Any(x => x.ProcessName.Equals(callBackData)))
                 {
                     await HandleDetailsRequest(botClient, update, await _mediator.Send(new Application.Processes.Details.Query { ProcessName = callBackData }),
                     InlineKeyboards.ProcessMenuKeyboard(),
@@ -162,7 +159,7 @@ namespace TGBot.Services
                 //Specific process actions
                 if (callBackData == ProcessMenu.Kill)
                 {
-                    await HandleFinalRequest(botClient, update, await _mediator.Send(new Application.Processes.Kill.Command { ProcessName = _userRequests[chatId].Item }), "Process successfully killed", cancellationToken);
+                    await HandleFinalRequest(botClient, update, await _mediator.Send(new Application.Processes.Kill.Command { ProcessName = _userRequest.Item }), "Process successfully killed", cancellationToken);
                     return;
                 }
 
@@ -175,7 +172,7 @@ namespace TGBot.Services
             }
 
             //RProcesses menu actions
-            if (_userRequests[chatId].BaseMenuSection == BaseMenu.RProcess)
+            if (_userRequest.BaseMenuSection == BaseMenu.RProcess)
             {
                 //Add new rProcess
                 if (callBackData == RProcessesMenu.Add)
@@ -185,9 +182,9 @@ namespace TGBot.Services
                     return;
                 }
 
-                if (_userRequests[chatId].Item != null &&
-                    _userRequests[chatId].Boundaries.StartTime == TimeOnly.MaxValue &&
-                    !_userRequests[chatId].Items.Any(x => x.ProcessName.Equals(_userRequests[chatId].Item)) &&
+                if (_userRequest.Item != null &&
+                    _userRequest.Boundaries.StartTime == TimeOnly.MaxValue &&
+                    !_userRequest.Items.Any(x => x.ProcessName.Equals(_userRequest.Item)) &&
                     TimeMenu.TimeOptions.Any(x => x.Equals(callBackData)))
                 {
                     response = "Select blocker end time";
@@ -195,17 +192,17 @@ namespace TGBot.Services
                     return;
                 }
 
-                if (_userRequests[chatId].Item != null &&
-                    _userRequests[chatId].Boundaries.StartTime != TimeOnly.MaxValue &&
-                    !_userRequests[chatId].Items.Any(x => x.ProcessName.Equals(_userRequests[chatId].Item)) &&
+                if (_userRequest.Item != null &&
+                    _userRequest.Boundaries.StartTime != TimeOnly.MaxValue &&
+                    !_userRequest.Items.Any(x => x.ProcessName.Equals(_userRequest.Item)) &&
                     TimeMenu.TimeOptions.Any(x => x.Equals(callBackData)))
                 {
-                    _userRequests[chatId].Boundaries.EndTime = TimeOnly.Parse(callBackData);
+                    _userRequest.Boundaries.EndTime = TimeOnly.Parse(callBackData);
                     var rProcess = new RProcess()
                     {
-                        ProcessName = _userRequests[chatId].Item,
-                        BlockStartTime = _userRequests[chatId].Boundaries.StartTime,
-                        BlockEndTime = _userRequests[chatId].Boundaries.EndTime
+                        ProcessName = _userRequest.Item,
+                        BlockStartTime = _userRequest.Boundaries.StartTime,
+                        BlockEndTime = _userRequest.Boundaries.EndTime
                     };
                     await HandleEndTimeInput(botClient, update, await _mediator.Send(new Add.Command { Process = rProcess }), InlineKeyboards.RProcessesMenuKeyboard(), response, cancellationToken);
                     return;
@@ -219,8 +216,8 @@ namespace TGBot.Services
                     return;
                 }
 
-                if (_userRequests[chatId].Item == null &&
-                    _userRequests[chatId].Boundaries.StartTime == TimeOnly.MaxValue &&
+                if (_userRequest.Item == null &&
+                    _userRequest.Boundaries.StartTime == TimeOnly.MaxValue &&
                     TimeMenu.TimeOptions.Any(x => x.Equals(callBackData)))
                 {
                     response = "Select blocker end time";
@@ -228,12 +225,12 @@ namespace TGBot.Services
                     return;
                 }
 
-                if (_userRequests[chatId].Item == null &&
-                    _userRequests[chatId].Boundaries.StartTime != TimeOnly.MaxValue &&
+                if (_userRequest.Item == null &&
+                    _userRequest.Boundaries.StartTime != TimeOnly.MaxValue &&
                     TimeMenu.TimeOptions.Any(x => x.Equals(callBackData)))
                 {
-                    _userRequests[chatId].Boundaries.EndTime = TimeOnly.Parse(callBackData);
-                    await HandleEndTimeInput(botClient, update, await _mediator.Send(new EditAll.Command { Boundaries = _userRequests[chatId].Boundaries }), InlineKeyboards.RProcessesMenuKeyboard(), response, cancellationToken);
+                    _userRequest.Boundaries.EndTime = TimeOnly.Parse(callBackData);
+                    await HandleEndTimeInput(botClient, update, await _mediator.Send(new EditAll.Command { Boundaries = _userRequest.Boundaries }), InlineKeyboards.RProcessesMenuKeyboard(), response, cancellationToken);
                     return;
                 }
 
@@ -258,8 +255,8 @@ namespace TGBot.Services
                 }
 
                 //View list item details
-                if (_userRequests[chatId].Items != null &&
-                    _userRequests[chatId].Items.Any(x => x.ProcessName.Equals(callBackData)))
+                if (_userRequest.Items != null &&
+                    _userRequest.Items.Any(x => x.ProcessName.Equals(callBackData)))
                 {
                     response = "Choose an action towards the process";
                     await HandleDetailsRequest(botClient, update, await _mediator.Send(new Details.Query { ProcessName = callBackData }), InlineKeyboards.RProcessMenuKeyboard(), response, cancellationToken);
@@ -275,7 +272,7 @@ namespace TGBot.Services
 
                 if (callBackData == RProcessMenu.EditName)
                 {
-                    response = $"Current name: <b>{_userRequests[chatId].Item}</b>\nProvide a new process name in a form of \"Name: ProcessName\"\nWithout quotes!\nIn case you want to cancell simply send /menu to start the flow over";
+                    response = $"Current name: <b>{_userRequest.Item}</b>\nProvide a new process name in a form of \"Name: ProcessName\"\nWithout quotes!\nIn case you want to cancell simply send /menu to start the flow over";
                     await HandleMenuRequestWithTextResponse(botClient, update, response, cancellationToken);
                     return;
                 }
@@ -284,14 +281,14 @@ namespace TGBot.Services
                 //Edit RProcess time boundaries
                 if (callBackData == RProcessMenu.EditTime)
                 {
-                    response = $"Current name: <b>{_userRequests[chatId].Item}</b>\nSelect new blocker start time";
+                    response = $"Current name: <b>{_userRequest.Item}</b>\nSelect new blocker start time";
                     await botClient.EditMessageTextAsync(chatId: chatId, messageId: update.CallbackQuery.Message.MessageId, text: response, replyMarkup: await InlineKeyboards.ListKeyboard(), parseMode: ParseMode.Html);
                     return;
                 }
 
-                if (_userRequests[chatId].Item != null &&
-                    _userRequests[chatId].Boundaries.StartTime == TimeOnly.MaxValue &&
-                    _userRequests[chatId].Items.Any(x => x.ProcessName.Equals(_userRequests[chatId].Item)) &&
+                if (_userRequest.Item != null &&
+                    _userRequest.Boundaries.StartTime == TimeOnly.MaxValue &&
+                    _userRequest.Items.Any(x => x.ProcessName.Equals(_userRequest.Item)) &&
                     TimeMenu.TimeOptions.Any(x => x.Equals(callBackData)))
                 {
                     response = "Select blocker end time";
@@ -299,20 +296,20 @@ namespace TGBot.Services
                     return;
                 }
 
-                if (_userRequests[chatId].Item != null &&
-                    _userRequests[chatId].Boundaries.StartTime != TimeOnly.MaxValue &&
-                    _userRequests[chatId].Items.Any(x => x.ProcessName.Equals(_userRequests[chatId].Item)) &&
+                if (_userRequest.Item != null &&
+                    _userRequest.Boundaries.StartTime != TimeOnly.MaxValue &&
+                    _userRequest.Items.Any(x => x.ProcessName.Equals(_userRequest.Item)) &&
                     TimeMenu.TimeOptions.Any(x => x.Equals(callBackData)))
                 {
-                    _userRequests[chatId].Boundaries.EndTime = TimeOnly.Parse(callBackData);
+                    _userRequest.Boundaries.EndTime = TimeOnly.Parse(callBackData);
                     var rProcess = new RProcess()
                     {
-                        ProcessName = _userRequests[chatId].Item,
-                        BlockStartTime = _userRequests[chatId].Boundaries.StartTime,
-                        BlockEndTime = _userRequests[chatId].Boundaries.EndTime
+                        ProcessName = _userRequest.Item,
+                        BlockStartTime = _userRequest.Boundaries.StartTime,
+                        BlockEndTime = _userRequest.Boundaries.EndTime
                     };
 
-                    await HandleFinalRequest(_botClient, update, await _mediator.Send(new Edit.Command { ProcessName = _userRequests[chatId].Item, Process = rProcess }), "Success", cancellationToken);
+                    await HandleFinalRequest(_botClient, update, await _mediator.Send(new Edit.Command { ProcessName = _userRequest.Item, Process = rProcess }), "Success", cancellationToken);
                     response = "Choose an action towards the process";
                     await HandleDetailsRequest(botClient, update, await _mediator.Send(new Details.Query { ProcessName = rProcess.ProcessName }), InlineKeyboards.RProcessMenuKeyboard(), response, cancellationToken);
                     return;
@@ -321,7 +318,7 @@ namespace TGBot.Services
                 if (callBackData == RProcessMenu.Delete)
                 {
                     response = "Process have been removed successfully";
-                    await HandleFinalRequest(botClient, update, await _mediator.Send(new Delete.Command() { ProcessName = _userRequests[chatId].Item }), response, cancellationToken);
+                    await HandleFinalRequest(botClient, update, await _mediator.Send(new Delete.Command() { ProcessName = _userRequest.Item }), response, cancellationToken);
                     await HandleListRequest(botClient, update, await _mediator.Send(new List.Query()), cancellationToken);
                     return;
                 }
@@ -351,13 +348,13 @@ namespace TGBot.Services
                 return;
             }
 
-            else if (_userRequests[chatId].BaseMenuSection == BaseMenu.RProcess && _userRequests[chatId].Item == null)
+            else if (_userRequest.BaseMenuSection == BaseMenu.RProcess && _userRequest.Item == null)
             {
                 if (CheckName(messageText))
                 {
                     response = "Select blocker start time";
                     var name = messageText.Split(' ')[1];
-                    _userRequests[chatId].Item = name;
+                    _userRequest.Item = name;
                     await _botClient.SendTextMessageAsync(chatId: chatId,
                         text: response, replyMarkup: await InlineKeyboards.ListKeyboard());
                     return;
@@ -367,16 +364,16 @@ namespace TGBot.Services
                 return;
             }
 
-            else if (_userRequests[chatId].BaseMenuSection == BaseMenu.RProcess && _userRequests[chatId].Item != null)
+            else if (_userRequest.BaseMenuSection == BaseMenu.RProcess && _userRequest.Item != null)
             {
                 if (CheckName(messageText))
                 {
                     var name = messageText.Split(' ')[1];
-                    var temp = _userRequests[chatId].Items.FirstOrDefault(x => x.ProcessName == _userRequests[chatId].Item);
+                    var temp = _userRequest.Items.FirstOrDefault(x => x.ProcessName == _userRequest.Item);
                     var updatedRprocess = new RProcess { ProcessName = name, BlockEndTime = temp.EndTime, BlockStartTime = temp.StartTime };
 
                     response = "Process name successfully updated";
-                    await HandleFinalRequest(botClient, update, await _mediator.Send(new Edit.Command { ProcessName = _userRequests[chatId].Item, Process = updatedRprocess }), response, cancellationToken);
+                    await HandleFinalRequest(botClient, update, await _mediator.Send(new Edit.Command { ProcessName = _userRequest.Item, Process = updatedRprocess }), response, cancellationToken);
 
                     response = "Choose an action towards the process";
                     await HandleDetailsRequest(botClient, update, await _mediator.Send(new Details.Query { ProcessName = name }), InlineKeyboards.RProcessMenuKeyboard(), response, cancellationToken);
@@ -405,7 +402,7 @@ namespace TGBot.Services
         private async Task HandleMenuRequestWithTextResponse(ITelegramBotClient botClient, Update update, string response, CancellationToken cancellationToken)
         {
             var chatId = update.CallbackQuery.Message.Chat.Id;
-            var tempUserRequest = _userRequests[chatId];
+            var tempUserRequest = _userRequest;
             UpdateUserRequests(chatId: chatId, baseMenuSection: tempUserRequest.BaseMenuSection, item: tempUserRequest.Item, items: tempUserRequest.Items);
             await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
             await botClient.EditMessageTextAsync(chatId: chatId, messageId: update.CallbackQuery.Message.MessageId,
@@ -418,8 +415,8 @@ namespace TGBot.Services
             var chatId = update.CallbackQuery.Message.Chat.Id;
 
             string baseMenuSection;
-            if (_userRequests[chatId].BaseMenuSection == CommonMenuItems.BackToBase || update.CallbackQuery.Data == CommonMenuItems.BackToBase) baseMenuSection = update.CallbackQuery.Data;
-            else baseMenuSection = _userRequests[chatId].BaseMenuSection;
+            if (_userRequest.BaseMenuSection == CommonMenuItems.BackToBase || update.CallbackQuery.Data == CommonMenuItems.BackToBase) baseMenuSection = update.CallbackQuery.Data;
+            else baseMenuSection = _userRequest.BaseMenuSection;
 
             UpdateUserRequests(chatId: chatId, baseMenuSection: baseMenuSection);
             await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
@@ -462,7 +459,7 @@ namespace TGBot.Services
                 }
                 await botClient.AnswerCallbackQueryAsync(callbackQueryId, response);
             }
-            UpdateUserRequests(chatId: chatId, baseMenuSection: _userRequests[chatId].BaseMenuSection);
+            UpdateUserRequests(chatId: chatId, baseMenuSection: _userRequest.BaseMenuSection);
             return;
         }
 
@@ -483,7 +480,7 @@ namespace TGBot.Services
 
             UpdateUserRequests(
                 chatId: chatId,
-                baseMenuSection: _userRequests[chatId].BaseMenuSection,
+                baseMenuSection: _userRequest.BaseMenuSection,
                 items: result.Value);
             await botClient.AnswerCallbackQueryAsync(callbackQueryId);
             await botClient.EditMessageTextAsync(
@@ -540,9 +537,9 @@ namespace TGBot.Services
 
             UpdateUserRequests(
                 chatId,
-                baseMenuSection: _userRequests[chatId].BaseMenuSection,
+                baseMenuSection: _userRequest.BaseMenuSection,
                 item: update.CallbackQuery.Data,
-                items: _userRequests[chatId].Items);
+                items: _userRequest.Items);
             return;
         }
 
@@ -551,7 +548,7 @@ namespace TGBot.Services
             var chatId = update.CallbackQuery.Message.Chat.Id;
             var callBackData = update.CallbackQuery.Data;
 
-            _userRequests[chatId].Boundaries.StartTime = TimeOnly.Parse(callBackData);
+            _userRequest.Boundaries.StartTime = TimeOnly.Parse(callBackData);
             await _botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
             await botClient.EditMessageTextAsync(chatId: chatId, messageId: update.CallbackQuery.Message.MessageId, text: response, replyMarkup: markup);
             return;
@@ -562,21 +559,17 @@ namespace TGBot.Services
             var chatId = update.CallbackQuery.Message.Chat.Id;
             await HandleFinalRequest(_botClient, update, result, "Success", cancellationToken);
             await botClient.EditMessageTextAsync(chatId: chatId, messageId: update.CallbackQuery.Message.MessageId, text: response, replyMarkup: markup);
-            UpdateUserRequests(chatId: chatId, baseMenuSection: _userRequests[chatId].BaseMenuSection, item: _userRequests[chatId].Item, items: _userRequests[chatId].Items);
+            UpdateUserRequests(chatId: chatId, baseMenuSection: _userRequest.BaseMenuSection, item: _userRequest.Item, items: _userRequest.Items);
             return;
         }
 
         private void UpdateUserRequests(long chatId, string baseMenuSection = null, string item = null, List<CommonProcessDto> items = null, RProcessDTO boundaries = null)
         {
-            if (_userRequests.ContainsKey(chatId))
-            {
-                _userRequests[chatId].BaseMenuSection = baseMenuSection;
-                _userRequests[chatId].Item = item;
-                _userRequests[chatId].Items = items == null ? new List<CommonProcessDto>() : items;
-                _userRequests[chatId].Boundaries = boundaries == null ? new RProcessDTO() : boundaries;
-                return;
-            }
-            _userRequests.Add(chatId, new UserRequest() { BaseMenuSection = baseMenuSection });
+            _userRequest.BaseMenuSection = baseMenuSection;
+            _userRequest.Item = item;
+            _userRequest.Items = items == null ? new List<CommonProcessDto>() : items;
+            _userRequest.Boundaries = boundaries == null ? new RProcessDTO() : boundaries;
+            return;
         }
 
         Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)

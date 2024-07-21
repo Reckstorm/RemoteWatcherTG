@@ -19,7 +19,15 @@ namespace Application.RProcesses
 
                 if (string.IsNullOrEmpty(rules)) return null;
 
-                return Result<List<CommonProcessDto>>.Success(JsonSerializer.Deserialize<List<CommonProcessDto>>(rules));
+                var list = new List<CommonProcessDto>();
+
+                var temp = JsonSerializer.Deserialize<List<RProcess>>(rules);
+                foreach (var rule in temp)
+                {
+                    list.Add(new CommonProcessDto { ProcessName = rule.ProcessName, StartTime = rule.BlockStartTime, EndTime = rule.BlockEndTime });
+                }
+
+                return Result<List<CommonProcessDto>>.Success(list);
             }
         }
     }

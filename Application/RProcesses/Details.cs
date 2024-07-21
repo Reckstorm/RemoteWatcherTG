@@ -20,7 +20,14 @@ public class Details
 
             var list = new List<CommonProcessDto>();
 
-            if (rules != null || rules != string.Empty) list = JsonSerializer.Deserialize<List<CommonProcessDto>>(rules);
+            if (rules != null || rules != string.Empty) 
+            {
+                var temp = JsonSerializer.Deserialize<List<RProcess>>(rules);
+                foreach (var rule in temp)
+                {
+                    list.Add(new CommonProcessDto { ProcessName = rule.ProcessName, StartTime = rule.BlockStartTime, EndTime = rule.BlockEndTime });
+                }
+            }
 
             var item = list.FirstOrDefault(p => p.ProcessName == request.ProcessName);
 

@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Domain;
-// using FluentValidation;
 using MediatR;
 
 namespace Application.RProcesses
@@ -11,15 +10,6 @@ namespace Application.RProcesses
         {
             public RProcessDTO Boundaries { get; set; }
         }
-
-        // public class CommandValidator : AbstractValidator<Command>
-        // {
-        //     public CommandValidator()
-        //     {
-        //     RuleFor(x => x.Boundaries.StartTime).GreaterThanOrEqualTo(TimeOnly.Parse("00:00:00")).LessThanOrEqualTo(TimeOnly.Parse("23:59:59"));
-        //     RuleFor(x => x.Boundaries.EndTime).LessThanOrEqualTo(TimeOnly.Parse("23:59:59")).GreaterThanOrEqualTo(TimeOnly.Parse("00:00:00"));
-        //     }
-        // }
 
         public class Handler : IRequestHandler<Command, Result<Unit>>
         {

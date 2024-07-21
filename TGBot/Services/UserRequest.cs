@@ -1,14 +1,15 @@
 using Application.DTOs;
+using Application.RProcesses;
 using Domain;
 
 namespace TGBot.Services
 {
     public class UserRequest
     {
-        public RProcess RProcess { get; set; } = null;
         public string Item { get; set; } = null;
-        public CommonProcessDto ItemBeingEdited { get; set; } = null;
-        public List<CommonProcessDto> Items { get; set; } = null;
-        public string BaseMenuSection { get; set; }
+        public RProcessDTO Boundaries { get; set; } = new RProcessDTO();
+        public List<CommonProcessDto> Items { get; set; } = new List<CommonProcessDto>();
+        public string BaseMenuSection { get; set; } = null;
+        // public string ChainMenuSection { get; set; } = null;
     }
 }

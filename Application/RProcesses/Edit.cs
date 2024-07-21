@@ -1,30 +1,20 @@
 using System.Text.Json;
 using Domain;
-// using FluentValidation;
 using MediatR;
 
 namespace Application.RProcesses;
 
 public class Edit
 {
-    public class Command : IRequest<Result<Unit>>
+    public class Command : IRequest<Result<RProcess>>
     {
         public string ProcessName { get; set; }
         public RProcess Process { get; set; }
     }
 
-    // public class CommandValidator : AbstractValidator<Command>
-    // {
-    //     public CommandValidator()
-    //     {
-    //         RuleFor(x => x.ProcessName).NotEmpty();
-    //         RuleFor(x => x.Process).SetValidator(new RProcessValidator());
-    //     }
-    // }
-
-    public class Handler : IRequestHandler<Command, Result<Unit>>
+    public class Handler : IRequestHandler<Command, Result<RProcess>>
     {
-        public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
+        public async Task<Result<RProcess>> Handle(Command request, CancellationToken cancellationToken)
         {
             var rules = await RegistryAgent.GetRules();
 
@@ -32,9 +22,9 @@ public class Edit
 
             if (rules != null || rules != string.Empty) list = JsonSerializer.Deserialize<List<RProcess>>(rules);
 
-            var item = list.FirstOrDefault(p => p.ProcessName == request.Process.ProcessName);
+            var item = list.FirstOrDefault(p => p.ProcessName == request.ProcessName);
 
-            if (item == null) return Result<Unit>.Failure("Rule does not exist");
+            if (item == null) return Result<RProcess>.Failure("Rule does not exist");
 
             list.Remove(item);
 
@@ -42,7 +32,7 @@ public class Edit
 
             await RegistryAgent.SetRules(JsonSerializer.Serialize(list));
 
-            return Result<Unit>.Success(Unit.Value);
+            return Result<RProcess>.Success(request.Process);
         }
     }
 }

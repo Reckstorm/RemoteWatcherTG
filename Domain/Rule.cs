@@ -1,6 +1,6 @@
 
 namespace Domain;
-public class RProcess
+public class Rule
 {
     public string ProcessName { get; set; }
     private object locker { get; set; } = new object();
@@ -22,21 +22,21 @@ public class RProcess
     }
 
 
-    public RProcess()
+    public Rule()
     {
         BlockStartTime = TimeOnly.MaxValue;
         BlockEndTime = TimeOnly.MaxValue;
         ProcessName = string.Empty;
     }
 
-    public RProcess(string proc)
+    public Rule(string proc)
     {
         BlockStartTime = TimeOnly.MaxValue;
         BlockEndTime = TimeOnly.MaxValue;
         ProcessName = proc;
     }
 
-    public RProcess(string proc, TimeOnly blockStartTime, TimeOnly blockEndtTime)
+    public Rule(string proc, TimeOnly blockStartTime, TimeOnly blockEndtTime)
     {
         ProcessName = proc;
         BlockStartTime = blockStartTime;

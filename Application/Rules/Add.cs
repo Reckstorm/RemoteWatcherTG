@@ -2,13 +2,13 @@ using System.Text.Json;
 using Domain;
 using MediatR;
 
-namespace Application.RProcesses
+namespace Application.Rules
 {
     public class Add
     {
         public class Command : IRequest<Result<Unit>>
         {
-            public RProcess Process { get; set; }
+            public Rule Process { get; set; }
         }
 
         public class Handler : IRequestHandler<Command, Result<Unit>>
@@ -17,9 +17,9 @@ namespace Application.RProcesses
             {
                 var rules = await RegistryAgent.GetRules();
 
-                var list = new List<RProcess>();
+                var list = new List<Rule>();
 
-                if (rules != null && !rules.Equals("")) list = JsonSerializer.Deserialize<List<RProcess>>(rules);
+                if (rules != null && !rules.Equals("")) list = JsonSerializer.Deserialize<List<Rule>>(rules);
 
                 if (list.Any(p => p.ProcessName == request.Process.ProcessName)) return Result<Unit>.Failure("Rule already exists");
 

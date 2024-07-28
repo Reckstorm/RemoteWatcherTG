@@ -1,6 +1,6 @@
-namespace Application.RProcesses
+namespace Application.DTOs
 {
-    public class RProcessDTO
+    public class RuleDto
     {
         public TimeOnly StartTime { get; set; } = TimeOnly.MaxValue;
         public TimeOnly EndTime { get; set; } = TimeOnly.MaxValue;

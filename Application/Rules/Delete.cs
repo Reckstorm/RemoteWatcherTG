@@ -1,9 +1,8 @@
 using System.Text.Json;
 using Domain;
-// using FluentValidation;
 using MediatR;
 
-namespace Application.RProcesses
+namespace Application.Rules
 {
     public class Delete
     {
@@ -11,14 +10,6 @@ namespace Application.RProcesses
         {
             public string ProcessName { get; set; }
         }
-
-        // public class CommandValidator: AbstractValidator<Command>
-        // {
-        //     public CommandValidator()
-        //     {
-        //         RuleFor(x => x.ProcessName).NotEmpty();
-        //     }
-        // }
 
         public class Handler : IRequestHandler<Command, Result<Unit>>
         {
@@ -28,7 +19,7 @@ namespace Application.RProcesses
 
                 if (rules == string.Empty) return Result<Unit>.Failure("There is nothing to delete");
 
-                var list = JsonSerializer.Deserialize<List<RProcess>>(rules);
+                var list = JsonSerializer.Deserialize<List<Rule>>(rules);
 
                 var item = list.FirstOrDefault(p => p.ProcessName == request.ProcessName);
 

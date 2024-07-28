@@ -1,6 +1,6 @@
 using MediatR;
 
-namespace Application.RProcesses
+namespace Application.Rules
 {
     public class DeleteAll
     {

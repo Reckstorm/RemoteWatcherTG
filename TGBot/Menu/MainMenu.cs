@@ -1,9 +1,9 @@
-namespace TGBot.Menus
+namespace TGBot.Menu
 {
-    public static class BaseMenu
+    public static class MainMenu
     {
         public static readonly string Logic = "Logic";
-        public static readonly string RProcess = "RProcesses";
+        public static readonly string Rule = "Rules";
         public static readonly string Process = "Processes";
     }
 }

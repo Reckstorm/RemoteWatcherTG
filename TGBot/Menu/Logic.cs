@@ -1,6 +1,6 @@
-namespace TGBot.Menus
+namespace TGBot.Menu
 {
-    public static class LogicMenu
+    public static class Logic
     {
         public static readonly string Start = "Start";
         public static readonly string Stop = "Stop";

@@ -6,7 +6,7 @@ using Domain;
 public class Blocker
 {
     private static Blocker _instance = null;
-    private List<RProcess> _rProcessList { get; set; }
+    private List<Rule> _RuleList { get; set; }
     private static object _locker { get; set; } = new object();
     private bool _running;
     public bool running
@@ -19,14 +19,14 @@ public class Blocker
     {
     }
 
-    public static Blocker GetInstance(List<RProcess> rProcesses)
+    public static Blocker GetInstance(List<Rule> Rulees)
     {
         lock (_locker)
         {
             if (_instance != null) return _instance;
             _instance = new Blocker
             {
-                _rProcessList = rProcesses
+                _RuleList = Rulees
             };
             CheckIfBGRunning();
             // RegistryAgent.AddToStartup();
@@ -44,7 +44,7 @@ public class Blocker
 
     private static void CheckIfBGRunning()
     {
-        if (_instance._rProcessList == null) return;
+        if (_instance._RuleList == null) return;
         Process temp = Process.GetProcesses().FirstOrDefault(p => p.ProcessName.Equals(AppDomain.CurrentDomain.FriendlyName));
         if (temp != null && temp.Id != Process.GetCurrentProcess().Id) temp.Kill();
     }
@@ -73,7 +73,7 @@ public class Blocker
                     var processes = Process.GetProcesses().ToList();
                     foreach (Process process in processes)
                     {
-                        foreach (RProcess p in _rProcessList)
+                        foreach (Rule p in _RuleList)
                         {
                             TimeOnly now = TimeOnly.Parse(DateTime.Now.ToLongTimeString());
                             if (p.ProcessName.Equals(AppDomain.CurrentDomain.FriendlyName)) continue;
@@ -116,7 +116,7 @@ public class Blocker
                 if (newRules != rules)
                 {
                     rules = newRules;
-                    _rProcessList = JsonSerializer.Deserialize<List<RProcess>>(rules);
+                    _RuleList = JsonSerializer.Deserialize<List<Rule>>(rules);
                     await RestartBlocker();
                 }
                 Thread.Sleep(200);

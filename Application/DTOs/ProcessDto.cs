@@ -1,4 +1,4 @@
-namespace Application.Processes;
+namespace Application.DTOs;
 
 public class ProcessDto
 {

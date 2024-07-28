@@ -5,18 +5,18 @@ using MediatR;
 namespace Application.Processes;
 public class Kill
 {
-    public class Command : IRequest<Result<CommonProcessDto>>
+    public class Command : IRequest<Result<CommonDto>>
     {
         public string ProcessName { get; set; }
     }
 
-    public class Handler : IRequestHandler<Command, Result<CommonProcessDto>>
+    public class Handler : IRequestHandler<Command, Result<CommonDto>>
     {
-        public async Task<Result<CommonProcessDto>> Handle(Command request, CancellationToken cancellationToken)
+        public async Task<Result<CommonDto>> Handle(Command request, CancellationToken cancellationToken)
         {
             var result = await ProcessAgent.KillProcess(request.ProcessName);
-            if (result.ProcessId == -1) return Result<CommonProcessDto>.Failure("There is no such process");
-            return Result<CommonProcessDto>.Success(result);
+            if (result.ProcessId == -1) return Result<CommonDto>.Failure("There is no such process");
+            return Result<CommonDto>.Success(result);
         }
     }
 }

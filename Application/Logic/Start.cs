@@ -13,7 +13,7 @@ public class Start
     {
         public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
         {
-            var blocker = Blocker.GetInstance(JsonSerializer.Deserialize<List<RProcess>>(await RegistryAgent.GetRules()));
+            var blocker = Blocker.GetInstance(JsonSerializer.Deserialize<List<Rule>>(await RegistryAgent.GetRules()));
 
             if (blocker.running) return Result<Unit>.Failure("Blocker is already running");
 

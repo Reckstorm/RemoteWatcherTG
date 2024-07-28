@@ -1,4 +1,4 @@
-namespace TGBot.Menus
+namespace TGBot.Menu
 {
     public static class TimeMenu
     {

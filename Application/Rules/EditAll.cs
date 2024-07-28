@@ -1,14 +1,15 @@
 using System.Text.Json;
+using Application.DTOs;
 using Domain;
 using MediatR;
 
-namespace Application.RProcesses
+namespace Application.Rules
 {
     public class EditAll
     {
         public class Command : IRequest<Result<Unit>>
         {
-            public RProcessDTO Boundaries { get; set; }
+            public RuleDto Boundaries { get; set; }
         }
 
         public class Handler : IRequestHandler<Command, Result<Unit>>
@@ -17,9 +18,9 @@ namespace Application.RProcesses
             {
                 var rules = await RegistryAgent.GetRules();
 
-                var list = new List<RProcess>();
+                var list = new List<Rule>();
 
-                if (rules != null && !rules.Equals("")) list = JsonSerializer.Deserialize<List<RProcess>>(rules);
+                if (rules != null && !rules.Equals("")) list = JsonSerializer.Deserialize<List<Rule>>(rules);
 
                 list.ForEach(r => {
                     r.BlockStartTime = request.Boundaries.StartTime;

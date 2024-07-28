@@ -1,31 +1,29 @@
 using System.Diagnostics;
 using Application.DTOs;
-using Application.Processes;
-using Domain;
 
 namespace Application.Core;
 
 public static class ProcessAgent
 {
-    public static async Task<List<CommonProcessDto>> GetProcesses()
+    public static async Task<List<CommonDto>> GetProcesses()
     {
-        var result = new List<CommonProcessDto>();
+        var result = new List<CommonDto>();
         await Task.Run(() =>
         {
             foreach (var process in Process.GetProcesses())
             {
                 if (!result.Any(p => p.ProcessName == process.ProcessName) && Environment.ProcessId != process.Id)
                 {
-                    result.Add(new CommonProcessDto { ProcessName = process.ProcessName });
+                    result.Add(new CommonDto { ProcessName = process.ProcessName });
                 }
             }
         });
         return result;
     }
 
-    public static async Task<CommonProcessDto> GetProcessDetails(string processName)
+    public static async Task<CommonDto> GetProcessDetails(string processName)
     {
-        var result = new CommonProcessDto();
+        var result = new CommonDto();
         await Task.Run(() =>
         {
             foreach (var process in Process.GetProcesses())
@@ -40,9 +38,9 @@ public static class ProcessAgent
         return result;
     }
 
-    public static async Task<CommonProcessDto> KillProcess(string processName)
+    public static async Task<CommonDto> KillProcess(string processName)
     {
-        var result = new CommonProcessDto();
+        var result = new CommonDto();
         await Task.Run(() =>
         {
             foreach (var process in Process.GetProcesses())
@@ -50,7 +48,7 @@ public static class ProcessAgent
                 if (process.ProcessName == processName && process.Id != Environment.ProcessId)
                 {
                     process.Kill();
-                    result = new CommonProcessDto { ProcessName = process.ProcessName, ProcessId = process.Id, IsRunning = false };
+                    result = new CommonDto { ProcessName = process.ProcessName, ProcessId = process.Id, IsRunning = false };
                 }
             }
         });

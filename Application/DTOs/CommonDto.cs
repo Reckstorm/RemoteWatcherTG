@@ -1,6 +1,6 @@
 namespace Application.DTOs
 {
-    public class CommonProcessDto
+    public class CommonDto
     {
         public string ProcessName { get; set; }
         public int ProcessId { get; set; } = -1;

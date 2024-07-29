@@ -25,7 +25,7 @@ namespace TGBot.Services
         {
             _configuration = configuration;
             _mediator = mediator;
-            _botClient = new TelegramBotClient("7131623656:AAHtTW9GZkGFLvGukTM4rst7dXV9m6AKEn4");
+            _botClient = new TelegramBotClient(_configuration["BotToken"]);
             _receiverOptions = new()
             {
                 AllowedUpdates = [UpdateType.Message, UpdateType.CallbackQuery]

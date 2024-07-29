@@ -48,7 +48,7 @@ public static class ProcessAgent
                 if (process.ProcessName == processName && process.Id != Environment.ProcessId)
                 {
                     process.Kill();
-                    result = new CommonDto { ProcessName = process.ProcessName, ProcessId = process.Id, IsRunning = false };
+                    result = new CommonDto { ProcessName = process.ProcessName, ProcessId = process.Id};
                 }
             }
         });

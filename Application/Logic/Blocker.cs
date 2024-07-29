@@ -19,17 +19,16 @@ public class Blocker
     {
     }
 
-    public static Blocker GetInstance(List<Rule> Rulees)
+    public static Blocker GetInstance(List<Rule> Rules)
     {
         lock (_locker)
         {
             if (_instance != null) return _instance;
             _instance = new Blocker
             {
-                _RuleList = Rulees
+                _RuleList = Rules
             };
             CheckIfBGRunning();
-            // RegistryAgent.AddToStartup();
             return _instance;
         }
     }

@@ -13,6 +13,8 @@ public class Stop
         {
             var blocker = Blocker.GetInstance();
 
+            if (blocker == null) return Result<Unit>.Failure("Blocker is not running");
+
             if (!blocker.running) return Result<Unit>.Failure("Blocker is not running");
 
             await blocker.StopBlock();

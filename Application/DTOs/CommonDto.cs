@@ -4,8 +4,7 @@ namespace Application.DTOs
     {
         public string ProcessName { get; set; }
         public int ProcessId { get; set; } = -1;
-        public bool IsRunning { get; set; } = true;
-        public TimeOnly StartTime { get; set; }
-        public TimeOnly EndTime { get; set; }
+        public TimeOnly StartTime { get; set; } = TimeOnly.MaxValue;
+        public TimeOnly EndTime { get; set; } = TimeOnly.MaxValue;
     }
 }

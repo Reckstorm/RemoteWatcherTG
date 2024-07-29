@@ -1,5 +1,7 @@
 using Application.DTOComparers;
 using Application.DTOs;
+using Application.Logic;
+using MediatR;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -7,9 +9,9 @@ using Telegram.Bot.Types.ReplyMarkups;
 using TGBot.Menu;
 using TGBot.Models;
 
-namespace TGBot.KeyboardHandlers
+namespace TGBot.MessageContentHandlers
 {
-    public static class KeyboardHandler
+    public static class MessageContentHandler
     {
         public static async Task HandleMenuRequestWithTextResponse(ITelegramBotClient botClient, Update update, string response, CancellationToken cancellationToken)
         {
@@ -24,7 +26,7 @@ namespace TGBot.KeyboardHandlers
         {
             var chatId = update.CallbackQuery.Message.Chat.Id;
             await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
-            await botClient.EditMessageTextAsync(chatId: chatId, messageId: update.CallbackQuery.Message.MessageId, text: response, replyMarkup: markup);
+            await botClient.EditMessageTextAsync(chatId: chatId, messageId: update.CallbackQuery.Message.MessageId, text: response, replyMarkup: markup, parseMode: ParseMode.Html);
             return;
         }
 
@@ -178,6 +180,20 @@ namespace TGBot.KeyboardHandlers
             await HandleFinalRequest(botClient, update, result, "Success", cancellationToken);
             await botClient.EditMessageTextAsync(chatId: chatId, messageId: update.CallbackQuery.Message.MessageId, text: response, replyMarkup: markup);
             return;
+        }
+
+        public static async Task<string> HandleLogicStatusRequest(IMediator mediator, string response)
+        {
+            var result = await mediator.Send(new Status.Query());
+            string text;
+
+            if (result == null) text = "Error getting status";
+            else if (result != null && result.Error != null) text = result.Error;
+            else text = result.Value ? "Running" : "Not running";
+
+            text = $"Current logic status: <b>{text}</b>\n{response}";
+
+            return text;
         }
 
         public async static Task<bool> EqualListsComparer<T>(IEnumerable<T> list1, IEnumerable<T> list2, IEqualityComparer<T> comparer)

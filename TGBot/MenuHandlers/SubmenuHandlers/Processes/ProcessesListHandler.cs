@@ -2,7 +2,7 @@ using Application.DTOs;
 using MediatR;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using TGBot.KeyboardHandlers;
+using TGBot.MessageContentHandlers;
 using TGBot.Menu;
 using TGBot.MenuHandlers.SubmenuHandlers.Processes.ItemHandlers;
 using TGBot.Models;
@@ -20,7 +20,7 @@ namespace TGBot.MenuHandlers.Processes.SubmenuHandlers
             if (userRequest.Items.Any(x => x.ProcessName.Equals(callBackData)))
             {
                 response = "You can either kill this process with the relevant button below or go back";
-                await KeyboardHandler.HandleDetailsRequest(botclient, update, userRequest, await mediator.Send(new Application.Processes.Details.Query { ProcessName = callBackData }), InlineKeyboards.ProcessMenuKeyboard(), response, cancellationToken);
+                await MessageContentHandler.HandleDetailsRequest(botclient, update, userRequest, await mediator.Send(new Application.Processes.Details.Query { ProcessName = callBackData }), InlineKeyboards.ProcessMenuKeyboard(), response, cancellationToken);
                 return;
             }
 
@@ -33,14 +33,14 @@ namespace TGBot.MenuHandlers.Processes.SubmenuHandlers
             //Refresh the list
             if (callBackData == CommonItems.Refresh)
             {
-                await KeyboardHandler.HandleListRequest(botclient, update, userRequest, await mediator.Send(new Application.Processes.List.Query()), CommonItems.BackToProcesses, cancellationToken);
+                await MessageContentHandler.HandleListRequest(botclient, update, userRequest, await mediator.Send(new Application.Processes.List.Query()), CommonItems.BackToProcesses, cancellationToken);
                 return;
             }
 
             //Back to Processes menu
             if (callBackData == CommonItems.BackToProcesses)
             {
-                await KeyboardHandler.HandleSimpleMenuRequest(botclient, update, InlineKeyboards.ProcessesMenuKeyboard(), response, cancellationToken);
+                await MessageContentHandler.HandleSimpleMenuRequest(botclient, update, InlineKeyboards.ProcessesMenuKeyboard(), response, cancellationToken);
                 userRequest.SubMenu = "";
                 userRequest.Items = new List<CommonDto>();
                 return;

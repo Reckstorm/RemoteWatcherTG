@@ -2,7 +2,7 @@ using Application.DTOs;
 using MediatR;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using TGBot.KeyboardHandlers;
+using TGBot.MessageContentHandlers;
 using TGBot.Menu;
 using TGBot.MenuHandlers.SubmenuHandlers.Rules.ItemHandlers;
 using TGBot.Models;
@@ -20,7 +20,7 @@ namespace TGBot.MenuHandlers.Rules.SubmenuHandlers
             if (userRequest.Items.Any(x => x.ProcessName.Equals(callBackData)))
             {
                 response = "Choose an action towards the process";
-                await KeyboardHandler.HandleDetailsRequest(botclient, update, userRequest, await mediator.Send(new Application.Rules.Details.Query { ProcessName = callBackData }), InlineKeyboards.RuleMenuKeyboard(), response, cancellationToken);
+                await MessageContentHandler.HandleDetailsRequest(botclient, update, userRequest, await mediator.Send(new Application.Rules.Details.Query { ProcessName = callBackData }), InlineKeyboards.RuleMenuKeyboard(), response, cancellationToken);
                 return;
             }
 
@@ -32,14 +32,14 @@ namespace TGBot.MenuHandlers.Rules.SubmenuHandlers
             //Refresh the list
             if (callBackData == CommonItems.Refresh)
             {
-                await KeyboardHandler.HandleListRequest(botclient, update, userRequest, await mediator.Send(new Application.Rules.List.Query()), CommonItems.BackToRules, cancellationToken);
+                await MessageContentHandler.HandleListRequest(botclient, update, userRequest, await mediator.Send(new Application.Rules.List.Query()), CommonItems.BackToRules, cancellationToken);
                 return;
             }
 
             //Back to Rules menu
             if (callBackData == CommonItems.BackToRules)
             {
-                await KeyboardHandler.HandleSimpleMenuRequest(botclient, update, InlineKeyboards.RulesMenuKeyboard(), response, cancellationToken);
+                await MessageContentHandler.HandleSimpleMenuRequest(botclient, update, InlineKeyboards.RulesMenuKeyboard(), response, cancellationToken);
                 userRequest.SubMenu = "";
                 userRequest.Items = new List<CommonDto>();
                 return;

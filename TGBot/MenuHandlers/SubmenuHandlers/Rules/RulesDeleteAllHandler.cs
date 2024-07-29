@@ -1,7 +1,7 @@
 using MediatR;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using TGBot.KeyboardHandlers;
+using TGBot.MessageContentHandlers;
 using TGBot.Menu;
 using TGBot.Models;
 
@@ -16,15 +16,15 @@ namespace TGBot.MenuHandlers.Rules.SubmenuHandlers
             if (callBackData == Confirmation.Yes)
             {
                 response = "All have been rules successfully deleted";
-                await KeyboardHandler.HandleFinalRequest(botclient, update, await mediator.Send(new Application.Rules.DeleteAll.Command()), response, cancellationToken);
-                await KeyboardHandler.HandleSimpleMenuRequest(botclient, update, InlineKeyboards.RulesMenuKeyboard(), response, cancellationToken);
+                await MessageContentHandler.HandleFinalRequest(botclient, update, await mediator.Send(new Application.Rules.DeleteAll.Command()), response, cancellationToken);
+                await MessageContentHandler.HandleSimpleMenuRequest(botclient, update, InlineKeyboards.RulesMenuKeyboard(), response, cancellationToken);
                 userRequest.SubMenu = "";
                 return;
             }
             
             if (callBackData == Confirmation.No)
             {
-                await KeyboardHandler.HandleSimpleMenuRequest(botclient, update, InlineKeyboards.RulesMenuKeyboard(), response, cancellationToken);
+                await MessageContentHandler.HandleSimpleMenuRequest(botclient, update, InlineKeyboards.RulesMenuKeyboard(), response, cancellationToken);
                 userRequest.SubMenu = "";
                 return;
             }

@@ -1,7 +1,7 @@
 using MediatR;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using TGBot.KeyboardHandlers;
+using TGBot.MessageContentHandlers;
 using TGBot.Menu;
 using TGBot.Models;
 
@@ -16,15 +16,15 @@ namespace TGBot.MenuHandlers.SubmenuHandlers.Rules.ItemHandlers.ItemMenuHandlers
             if (callBackData == Confirmation.Yes)
             {
                 response = "Rule have been deleted successfully";
-                await KeyboardHandler.HandleFinalRequest(botclient, update, await mediator.Send(new Application.Rules.Delete.Command() { ProcessName = userRequest.Item }), response, cancellationToken);
-                await KeyboardHandler.HandleListRequest(botclient, update, userRequest, await mediator.Send(new Application.Rules.List.Query()), CommonItems.BackToRules, cancellationToken);
+                await MessageContentHandler.HandleFinalRequest(botclient, update, await mediator.Send(new Application.Rules.Delete.Command() { ProcessName = userRequest.Item }), response, cancellationToken);
+                await MessageContentHandler.HandleListRequest(botclient, update, userRequest, await mediator.Send(new Application.Rules.List.Query()), CommonItems.BackToRules, cancellationToken);
                 userRequest.ItemMenu = "";
                 return;
             }
             
             if (callBackData == Confirmation.No)
             {
-                await KeyboardHandler.HandleListRequest(botclient, update, userRequest, await mediator.Send(new Application.Rules.List.Query()), CommonItems.BackToRules, cancellationToken);
+                await MessageContentHandler.HandleListRequest(botclient, update, userRequest, await mediator.Send(new Application.Rules.List.Query()), CommonItems.BackToRules, cancellationToken);
                 userRequest.ItemMenu = "";
                 return;
             }

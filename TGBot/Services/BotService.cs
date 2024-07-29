@@ -6,7 +6,7 @@ using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using TGBot.KeyboardHandlers;
+using TGBot.MessageContentHandlers;
 using TGBot.Menu;
 using TGBot.MenuHandlers;
 using TGBot.Models;
@@ -83,7 +83,7 @@ namespace TGBot.Services
                 //Base menu actions
                 if (_userRequest.Menu == CommonItems.BackToMain)
                 {
-                    MainMenuHandler.Handle(botClient, update, _userRequest, response, cancellationToken);
+                    MainMenuHandler.Handle(botClient, update, _mediator, _userRequest, response, cancellationToken);
                 }
 
                 //Logic menu actions
@@ -154,12 +154,12 @@ namespace TGBot.Services
                         var updatedRule = new Domain.Rule { ProcessName = name, BlockEndTime = _userRequest.Items[i].EndTime, BlockStartTime = _userRequest.Items[i].StartTime };
 
                         response = "Process name successfully updated";
-                        await KeyboardHandler.HandleFinalRequest(botClient, update, await _mediator.Send(new Application.Rules.Edit.Command { ProcessName = _userRequest.Item, Process = updatedRule }), response, cancellationToken);
+                        await MessageContentHandler.HandleFinalRequest(botClient, update, await _mediator.Send(new Application.Rules.Edit.Command { ProcessName = _userRequest.Item, Process = updatedRule }), response, cancellationToken);
                         _userRequest.Items[i].ProcessName = name;
                         _userRequest.Item = name;
 
                         response = "Choose an action towards the process";
-                        await KeyboardHandler.HandleDetailsRequest(botClient, update, _userRequest, await _mediator.Send(new Application.Rules.Details.Query { ProcessName = name }), InlineKeyboards.RuleMenuKeyboard(), response, cancellationToken);
+                        await MessageContentHandler.HandleDetailsRequest(botClient, update, _userRequest, await _mediator.Send(new Application.Rules.Details.Query { ProcessName = name }), InlineKeyboards.RuleMenuKeyboard(), response, cancellationToken);
                         return;
                     }
                     await botClient.SendTextMessageAsync(chatId: chatId,

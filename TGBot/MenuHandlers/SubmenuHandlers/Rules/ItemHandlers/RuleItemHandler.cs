@@ -2,7 +2,7 @@ using MediatR;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using TGBot.KeyboardHandlers;
+using TGBot.MessageContentHandlers;
 using TGBot.Menu;
 using TGBot.MenuHandlers.SubmenuHandlers.Rules.ItemHandlers.ItemMenuHandlers;
 using TGBot.Models;
@@ -19,7 +19,7 @@ namespace TGBot.MenuHandlers.SubmenuHandlers.Rules.ItemHandlers
             if (callBackData == Rule.EditName)
             {
                 response = $"Current name: <b>{userRequest.Item}</b>\nProvide a new process name in a form of \"Name: ProcessName\"\nWithout quotes!\nIn case you want to cancell simply send /menu to start the flow over";
-                await KeyboardHandler.HandleMenuRequestWithTextResponse(botclient, update, response, cancellationToken);
+                await MessageContentHandler.HandleMenuRequestWithTextResponse(botclient, update, response, cancellationToken);
                 return;
             }
 
@@ -41,7 +41,7 @@ namespace TGBot.MenuHandlers.SubmenuHandlers.Rules.ItemHandlers
             if (callBackData == Rule.Delete)
             {
                 response = $"Are you sure you want to delete rule {userRequest.Item}?";
-                await KeyboardHandler.HandleConfirmationRequest(botclient, update, response, cancellationToken);
+                await MessageContentHandler.HandleConfirmationRequest(botclient, update, response, cancellationToken);
                 userRequest.ItemMenu = Rule.Delete;
                 return;
             }
@@ -54,7 +54,7 @@ namespace TGBot.MenuHandlers.SubmenuHandlers.Rules.ItemHandlers
             //Back to list
             if (callBackData == CommonItems.BackToList)
             {
-                await KeyboardHandler.HandleListRequest(botclient, update, userRequest, await mediator.Send(new Application.Rules.List.Query()), CommonItems.BackToRules, cancellationToken);
+                await MessageContentHandler.HandleListRequest(botclient, update, userRequest, await mediator.Send(new Application.Rules.List.Query()), CommonItems.BackToRules, cancellationToken);
                 userRequest.Item = "";
                 return;
             }

@@ -2,7 +2,7 @@ using Application.DTOs;
 using MediatR;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using TGBot.KeyboardHandlers;
+using TGBot.MessageContentHandlers;
 using TGBot.Menu;
 using TGBot.Models;
 
@@ -18,7 +18,7 @@ namespace TGBot.MenuHandlers.SubmenuHandlers.Rules.ItemHandlers.ItemMenuHandlers
             if (userRequest.Boundaries.StartTime == TimeOnly.MaxValue && TimeMenu.TimeOptions.Any(x => x.Equals(callBackData)))
             {
                 response = "Select blocker end time";
-                await KeyboardHandler.HandleStartTimeInput(botclient, update, userRequest, await InlineKeyboards.ListKeyboard(CommonItems.BackToDetails), response, cancellationToken);
+                await MessageContentHandler.HandleStartTimeInput(botclient, update, userRequest, await InlineKeyboards.ListKeyboard(CommonItems.BackToDetails), response, cancellationToken);
                 return;
             }
 
@@ -33,9 +33,9 @@ namespace TGBot.MenuHandlers.SubmenuHandlers.Rules.ItemHandlers.ItemMenuHandlers
                     BlockEndTime = userRequest.Boundaries.EndTime
                 };
 
-                await KeyboardHandler.HandleFinalRequest(botclient, update, await mediator.Send(new Application.Rules.Edit.Command { ProcessName = userRequest.Item, Process = rule }), "Success", cancellationToken);
+                await MessageContentHandler.HandleFinalRequest(botclient, update, await mediator.Send(new Application.Rules.Edit.Command { ProcessName = userRequest.Item, Process = rule }), "Success", cancellationToken);
                 response = "Choose an action towards the process";
-                await KeyboardHandler.HandleDetailsRequest(botclient, update, userRequest, await mediator.Send(new Application.Rules.Details.Query { ProcessName = rule.ProcessName }), InlineKeyboards.RuleMenuKeyboard(), response, cancellationToken);
+                await MessageContentHandler.HandleDetailsRequest(botclient, update, userRequest, await mediator.Send(new Application.Rules.Details.Query { ProcessName = rule.ProcessName }), InlineKeyboards.RuleMenuKeyboard(), response, cancellationToken);
                 userRequest.Boundaries = new RuleDto();
                 userRequest.ItemMenu = "";
                 return;
@@ -43,7 +43,7 @@ namespace TGBot.MenuHandlers.SubmenuHandlers.Rules.ItemHandlers.ItemMenuHandlers
 
             if (callBackData == CommonItems.BackToDetails)
             {
-                await KeyboardHandler.HandleDetailsRequest(botclient, update, userRequest, await mediator.Send(new Application.Rules.Details.Query { ProcessName = userRequest.Item }), InlineKeyboards.RuleMenuKeyboard(), response, cancellationToken);
+                await MessageContentHandler.HandleDetailsRequest(botclient, update, userRequest, await mediator.Send(new Application.Rules.Details.Query { ProcessName = userRequest.Item }), InlineKeyboards.RuleMenuKeyboard(), response, cancellationToken);
                 userRequest.Boundaries = new RuleDto();
                 userRequest.ItemMenu = "";
                 return;

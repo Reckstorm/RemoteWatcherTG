@@ -2,7 +2,7 @@ using MediatR;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using TGBot.KeyboardHandlers;
+using TGBot.MessageContentHandlers;
 using TGBot.Menu;
 using TGBot.MenuHandlers.SubmenuHandlers.Processes.ItemHandlers.ItemMenuHandlers;
 using TGBot.Models;
@@ -19,8 +19,8 @@ namespace TGBot.MenuHandlers.SubmenuHandlers.Processes.ItemHandlers
             //Specific process actions
             if (callBackData == Process.Kill)
             {
-                await KeyboardHandler.HandleFinalRequest(botclient, update, await mediator.Send(new Application.Processes.Kill.Command { ProcessName = userRequest.Item }), "Process successfully killed", cancellationToken);
-                await KeyboardHandler.HandleListRequest(botclient, update, userRequest, await mediator.Send(new Application.Processes.List.Query()), CommonItems.BackToProcesses, cancellationToken);
+                await MessageContentHandler.HandleFinalRequest(botclient, update, await mediator.Send(new Application.Processes.Kill.Command { ProcessName = userRequest.Item }), "Process successfully killed", cancellationToken);
+                await MessageContentHandler.HandleListRequest(botclient, update, userRequest, await mediator.Send(new Application.Processes.List.Query()), CommonItems.BackToProcesses, cancellationToken);
                 userRequest.Item = "";
                 return;
             }
@@ -42,7 +42,7 @@ namespace TGBot.MenuHandlers.SubmenuHandlers.Processes.ItemHandlers
             //Back to Processes list
             if (callBackData == CommonItems.BackToList)
             {
-                await KeyboardHandler.HandleListRequest(botclient, update, userRequest, await mediator.Send(new Application.Processes.List.Query()), CommonItems.BackToProcesses, cancellationToken);
+                await MessageContentHandler.HandleListRequest(botclient, update, userRequest, await mediator.Send(new Application.Processes.List.Query()), CommonItems.BackToProcesses, cancellationToken);
                 userRequest.Item = "";
                 return;
             }

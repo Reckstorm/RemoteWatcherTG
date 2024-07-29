@@ -1,7 +1,7 @@
 using MediatR;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using TGBot.KeyboardHandlers;
+using TGBot.MessageContentHandlers;
 using TGBot.Menu;
 using TGBot.MenuHandlers.Processes.SubmenuHandlers;
 using TGBot.Models;
@@ -17,7 +17,7 @@ namespace TGBot.MenuHandlers
             //Send a list of processes
             if (callBackData == Menu.Processes.List)
             {
-                await KeyboardHandler.HandleListRequest(botclient, update, userRequest, await mediator.Send(new Application.Processes.List.Query()), CommonItems.BackToProcesses, cancellationToken);
+                await MessageContentHandler.HandleListRequest(botclient, update, userRequest, await mediator.Send(new Application.Processes.List.Query()), CommonItems.BackToProcesses, cancellationToken);
                 userRequest.SubMenu = Menu.Processes.List;
                 return;
             }
@@ -31,7 +31,7 @@ namespace TGBot.MenuHandlers
             //Back to base menu
             if (callBackData == CommonItems.BackToMain)
             {
-                await KeyboardHandler.HandleSimpleMenuRequest(botclient, update, InlineKeyboards.MainMenuKeyboard(), response, cancellationToken);
+                await MessageContentHandler.HandleSimpleMenuRequest(botclient, update, InlineKeyboards.MainMenuKeyboard(), response, cancellationToken);
                 userRequest.Menu = CommonItems.BackToMain;
                 return;
             }

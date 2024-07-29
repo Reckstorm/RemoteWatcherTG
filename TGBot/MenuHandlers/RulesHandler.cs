@@ -1,7 +1,7 @@
 using MediatR;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using TGBot.KeyboardHandlers;
+using TGBot.MessageContentHandlers;
 using TGBot.Menu;
 using TGBot.MenuHandlers.Rules.SubmenuHandlers;
 using TGBot.Models;
@@ -20,7 +20,7 @@ namespace TGBot.MenuHandlers
             {
                 response = "Provide a process name in a form of \"Name: ProcessName\"\nWithout quotes!\nIn case you want to cancell simply send /menu to start the flow over";
                 userRequest.SubMenu = Menu.Rules.Add;
-                await KeyboardHandler.HandleMenuRequestWithTextResponse(botclient, update, response, cancellationToken);
+                await MessageContentHandler.HandleMenuRequestWithTextResponse(botclient, update, response, cancellationToken);
                 return;
             }
 
@@ -50,7 +50,7 @@ namespace TGBot.MenuHandlers
             {
                 response = "Are you sure you want to delete all rules?";
                 userRequest.SubMenu = Menu.Rules.DeleteAll;
-                await KeyboardHandler.HandleConfirmationRequest(botclient, update, response, cancellationToken);
+                await MessageContentHandler.HandleConfirmationRequest(botclient, update, response, cancellationToken);
                 return;
             }
 
@@ -63,7 +63,7 @@ namespace TGBot.MenuHandlers
             //List all Rules
             if (callBackData == Menu.Rules.List)
             {
-                await KeyboardHandler.HandleListRequest(botclient, update, userRequest, await mediator.Send(new Application.Rules.List.Query()), CommonItems.BackToRules, cancellationToken);
+                await MessageContentHandler.HandleListRequest(botclient, update, userRequest, await mediator.Send(new Application.Rules.List.Query()), CommonItems.BackToRules, cancellationToken);
                 userRequest.SubMenu = Menu.Rules.List;
                 return;
             }
@@ -77,7 +77,7 @@ namespace TGBot.MenuHandlers
             //Back to main
             if (callBackData == CommonItems.BackToMain)
             {
-                await KeyboardHandler.HandleSimpleMenuRequest(botclient, update, InlineKeyboards.MainMenuKeyboard(), response, cancellationToken);
+                await MessageContentHandler.HandleSimpleMenuRequest(botclient, update, InlineKeyboards.MainMenuKeyboard(), response, cancellationToken);
                 userRequest.Menu = CommonItems.BackToMain;
                 return;
             }

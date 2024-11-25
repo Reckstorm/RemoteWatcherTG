@@ -1,5 +1,3 @@
-using System.Data;
-using System.Text.Json;
 using MediatR;
 
 namespace Application.Logic
@@ -13,18 +11,11 @@ namespace Application.Logic
         {
             public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
             {
-                var rules = await RegistryAgent.GetRules();
+                var blocker = Blocker.GetInstance();
 
-                var list = new List<Domain.Rule>();
+                await blocker.Unblock();
 
-                if (rules != null && !rules.Equals("")) list = JsonSerializer.Deserialize<List<Domain.Rule>>(rules);
-
-                list.ForEach(r =>
-                {
-                    r.UnblockedUntilStart = true;
-                });
-
-                await RegistryAgent.SetRules(JsonSerializer.Serialize(list));
+                if (!blocker.unblock) return Result<Unit>.Failure("Failed to unblock");
 
                 return Result<Unit>.Success(Unit.Value);
             }

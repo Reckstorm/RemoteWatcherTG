@@ -12,18 +12,11 @@ namespace Application.Logic
         {
             public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
             {
-                var rules = await RegistryAgent.GetRules();
+                var blocker = Blocker.GetInstance();
 
-                var list = new List<Domain.Rule>();
+                await blocker.Block();
 
-                if (rules != null && !rules.Equals("")) list = JsonSerializer.Deserialize<List<Domain.Rule>>(rules);
-
-                list.ForEach(r =>
-                {
-                    r.UnblockedUntilStart = false;
-                });
-
-                await RegistryAgent.SetRules(JsonSerializer.Serialize(list));
+                if (blocker.unblock) return Result<Unit>.Failure("Failed to block");
 
                 return Result<Unit>.Success(Unit.Value);
             }

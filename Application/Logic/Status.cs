@@ -20,12 +20,8 @@ namespace Application.Logic
 
                 if (blocker == null) return Result<StatusDto>.Failure("Failed to check status");
 
-                var list = JsonSerializer.Deserialize<List<Domain.Rule>>(await RegistryAgent.GetRules());
-
-                bool StoppedUntilStartTimeStatus = list.Count > 0 ? list.First().UnblockedUntilStart : false;
-
                 status.LogicStatus = blocker.running; 
-                status.StoppedUntilStartTimeStatus = StoppedUntilStartTimeStatus;
+                status.StoppedUntilStartTimeStatus = blocker.unblock;
 
                 return Result<StatusDto>.Success(status);
             }

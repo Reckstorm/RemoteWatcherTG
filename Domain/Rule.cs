@@ -21,21 +21,11 @@ public class Rule
         set { lock (locker) _blockEndTime = value; }
     }
 
-    private bool _unblockedUntilStart;
-
-    public bool UnblockedUntilStart
-    {
-        get { lock (locker) return _unblockedUntilStart; }
-        set { lock (locker) _unblockedUntilStart = value; }
-    }
-
-
     public Rule()
     {
         BlockStartTime = TimeOnly.MaxValue;
         BlockEndTime = TimeOnly.MaxValue;
         ProcessName = string.Empty;
-        UnblockedUntilStart = false;
     }
 
     public Rule(string proc)

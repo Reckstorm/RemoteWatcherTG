@@ -65,6 +65,7 @@ public class Blocker
         {
             running = true;
             RestartIfRulesChanged();
+            ResetUnblockUntilStartTime();
             Task.Run(async () =>
             {
                 while (running)
@@ -74,13 +75,10 @@ public class Blocker
                     {
                         foreach (Rule p in _RuleList)
                         {
-                            TimeOnly now = TimeOnly.Parse(DateTime.Now.ToLongTimeString());
                             if (p.ProcessName.Equals(AppDomain.CurrentDomain.FriendlyName)) continue;
-                            if (p.ProcessName.Equals(process.ProcessName)
-                            && ((now <= p.BlockEndTime && now >= p.BlockStartTime)
-                            || (now >= p.BlockStartTime && p.BlockStartTime >= p.BlockEndTime)
-                            || (now <= p.BlockEndTime && p.BlockEndTime <= p.BlockStartTime)))
+                            if (p.ProcessName.Equals(process.ProcessName) && CheckTime(p))
                             {
+                                if (p.UnblockedUntilStart) continue;
                                 foreach (Process temp in Process.GetProcessesByName(p.ProcessName))
                                 {
                                     temp.Kill();
@@ -95,6 +93,34 @@ public class Blocker
         }
     }
 
+    private async void ResetUnblockUntilStartTime()
+    {
+        var rules = await RegistryAgent.GetRules();
+        await Task.Run(async () =>
+        {
+            TimeOnly now = TimeOnly.Parse(DateTime.Now.ToLongTimeString());
+            while (running)
+            {
+                _RuleList.ForEach(async rule =>
+                {
+                    if (rule.UnblockedUntilStart && now >= rule.BlockStartTime)
+                    {
+                        rule.UnblockedUntilStart = false;
+                        await RegistryAgent.SetRules(JsonSerializer.Serialize(_RuleList));
+                    }
+                });
+                Thread.Sleep(200);
+            }
+        });
+    }
+
+    private bool CheckTime(Rule p)
+    {
+        TimeOnly now = TimeOnly.Parse(DateTime.Now.ToLongTimeString());
+        bool f = (now <= p.BlockEndTime && now >= p.BlockStartTime) || (now >= p.BlockStartTime && p.BlockStartTime >= p.BlockEndTime) || (now <= p.BlockEndTime && p.BlockEndTime <= p.BlockStartTime);
+        return f;
+    }
+
     private async Task RestartBlocker()
     {
         await Task.Run(async () =>
@@ -107,7 +133,7 @@ public class Blocker
     private async void RestartIfRulesChanged()
     {
         var rules = await RegistryAgent.GetRules();
-        Task task = Task.Run(async () =>
+        await Task.Run(async () =>
         {
             while (running)
             {

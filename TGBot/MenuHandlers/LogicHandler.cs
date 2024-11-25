@@ -16,32 +16,60 @@ namespace TGBot.MenuHandlers
             var callBackData = update.CallbackQuery.Data;
             var chatId = update.CallbackQuery.Message.Chat.Id;
 
-            if (callBackData == Logic.Start)
+            try
             {
-                response = "Blocker logic has been started successfully";
-                await MessageContentHandler.HandleFinalRequest(botclient, update, await mediator.Send(new Start.Command()), response, cancellationToken);
+                if (callBackData == Logic.Start)
+                {
+                    response = "Blocker logic has been started successfully";
+                    await MessageContentHandler.HandleFinalRequest(botclient, update, await mediator.Send(new Start.Command()), response, cancellationToken);
 
-                await botclient.EditMessageTextAsync(chatId: chatId, messageId: update.CallbackQuery.Message.MessageId,
-                    text: await MessageContentHandler.HandleLogicStatusRequest(mediator, "Choose an action"), replyMarkup: InlineKeyboards.LogicKeyboard(), parseMode: ParseMode.Html);
-                return;
+                    await botclient.EditMessageTextAsync(chatId: chatId, messageId: update.CallbackQuery.Message.MessageId,
+                        text: await MessageContentHandler.HandleLogicStatusRequest(mediator, "Choose an action"), replyMarkup: InlineKeyboards.LogicKeyboard(), parseMode: ParseMode.Html);
+                    return;
+                }
+
+                if (callBackData == Logic.StopCompletely)
+                {
+                    response = "Blocker logic has been stopped successfully";
+                    await MessageContentHandler.HandleFinalRequest(botclient, update, await mediator.Send(new Stop.Command()), response, cancellationToken);
+
+                    await botclient.EditMessageTextAsync(chatId: chatId, messageId: update.CallbackQuery.Message.MessageId,
+                        text: await MessageContentHandler.HandleLogicStatusRequest(mediator, "Choose an action"), replyMarkup: InlineKeyboards.LogicKeyboard(), parseMode: ParseMode.Html);
+                    return;
+                }
+
+                if (callBackData == Logic.StartNormalBlock)
+                {
+                    response = "Blocker logic has been reset to normal";
+                    await MessageContentHandler.HandleFinalRequest(botclient, update, await mediator.Send(new StartNormalBlocking.Command()), response, cancellationToken);
+
+                    await botclient.EditMessageTextAsync(chatId: chatId, messageId: update.CallbackQuery.Message.MessageId,
+                        text: await MessageContentHandler.HandleLogicStatusRequest(mediator, "Choose an action"), replyMarkup: InlineKeyboards.LogicKeyboard(), parseMode: ParseMode.Html);
+                    return;
+                }
+
+                if (callBackData == Logic.StopUntilStartTime)
+                {
+                    response = "Blocker logic has been stopped successfully until the start time";
+                    await MessageContentHandler.HandleFinalRequest(botclient, update, await mediator.Send(new StopUntilStartTime.Command()), response, cancellationToken);
+
+                    await botclient.EditMessageTextAsync(chatId: chatId, messageId: update.CallbackQuery.Message.MessageId,
+                        text: await MessageContentHandler.HandleLogicStatusRequest(mediator, "Choose an action"), replyMarkup: InlineKeyboards.LogicKeyboard(), parseMode: ParseMode.Html);
+                    return;
+                }
+
+                if (callBackData == CommonItems.BackToMain)
+                {
+                    await MessageContentHandler.HandleSimpleMenuRequest(botclient, update, InlineKeyboards.MainMenuKeyboard(), response, cancellationToken);
+                    userRequest.Menu = CommonItems.BackToMain;
+                    return;
+                }
             }
-
-            if (callBackData == Logic.Stop)
+            catch (Exception ex)
             {
-                response = "Blocker logic has been stopped successfully";
-                await MessageContentHandler.HandleFinalRequest(botclient, update, await mediator.Send(new Stop.Command()), response, cancellationToken);
+                System.Console.WriteLine(ex.Message);
+            };
 
-                await botclient.EditMessageTextAsync(chatId: chatId, messageId: update.CallbackQuery.Message.MessageId,
-                    text: await MessageContentHandler.HandleLogicStatusRequest(mediator, "Choose an action"), replyMarkup: InlineKeyboards.LogicKeyboard(), parseMode: ParseMode.Html);
-                return;
-            }
-
-            if (callBackData == CommonItems.BackToMain)
-            {
-                await MessageContentHandler.HandleSimpleMenuRequest(botclient, update, InlineKeyboards.MainMenuKeyboard(), response, cancellationToken);
-                userRequest.Menu = CommonItems.BackToMain;
-                return;
-            }
         }
     }
 }

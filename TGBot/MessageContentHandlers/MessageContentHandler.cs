@@ -185,15 +185,25 @@ namespace TGBot.MessageContentHandlers
         public static async Task<string> HandleLogicStatusRequest(IMediator mediator, string response)
         {
             var result = await mediator.Send(new Status.Query());
-            string text;
+            string logicStatus, unblockStatus;
 
-            if (result == null) text = "Error getting status";
-            else if (result != null && result.Error != null) text = result.Error;
-            else text = result.Value ? "Running" : "Not running";
+            if (result == null)
+            {
+                logicStatus = "Error getting status";
+                unblockStatus = "Error getting status";
+            }
+            else if (result != null && result.Error != null)
+            {
+                logicStatus = result.Error;
+                unblockStatus = result.Error;
+            }
+            else
+            {
+                logicStatus = result.Value.LogicStatus ? "Running" : "Not running";
+                unblockStatus = result.Value.StoppedUntilStartTimeStatus ? "Running" : "Not running";
+            }
 
-            text = $"Current logic status: <b>{text}</b>\n{response}";
-
-            return text;
+            return $"Current logic status: <b>{logicStatus}</b>\nCurrent unblock status: <b>{unblockStatus}</b>\n{response}";
         }
 
         public async static Task<bool> EqualListsComparer<T>(IEnumerable<T> list1, IEnumerable<T> list2, IEqualityComparer<T> comparer)

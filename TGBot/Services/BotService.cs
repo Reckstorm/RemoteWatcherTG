@@ -32,6 +32,7 @@ namespace TGBot.Services
             };
             _userRequest = new UserRequest();
 
+            Task.Delay(1000).Wait();
             _botClient.SendTextMessageAsync(_configuration["BotAdminChatId"], $"Bot started {DateTime.Now.ToShortTimeString()}");
         }
 

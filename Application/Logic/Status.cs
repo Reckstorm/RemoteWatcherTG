@@ -1,21 +1,33 @@
+using System.Data;
+using System.Text.Json;
+using Application.DTOs;
 using MediatR;
 
 namespace Application.Logic
 {
     public class Status
     {
-        public class Query : IRequest<Result<bool>>
+        public class Query : IRequest<Result<StatusDto>>
         { }
 
-        public class Handler : IRequestHandler<Query, Result<bool>>
+        public class Handler : IRequestHandler<Query, Result<StatusDto>>
         {
-            public async Task<Result<bool>> Handle(Query request, CancellationToken cancellationToken)
+            public async Task<Result<StatusDto>> Handle(Query request, CancellationToken cancellationToken)
             {
                 var blocker = Blocker.GetInstance();
 
-                if (blocker == null) return Result<bool>.Failure("Failed to check status");
+                StatusDto status = new StatusDto();
 
-                return Result<bool>.Success(blocker.running);
+                if (blocker == null) return Result<StatusDto>.Failure("Failed to check status");
+
+                var list = JsonSerializer.Deserialize<List<Domain.Rule>>(await RegistryAgent.GetRules());
+
+                bool StoppedUntilStartTimeStatus = list.Count > 0 ? list.First().UnblockedUntilStart : false;
+
+                status.LogicStatus = blocker.running; 
+                status.StoppedUntilStartTimeStatus = StoppedUntilStartTimeStatus;
+
+                return Result<StatusDto>.Success(status);
             }
         }
     }

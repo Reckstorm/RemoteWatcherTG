@@ -30,7 +30,11 @@ namespace TGBot
                     new InlineKeyboardButton[][]{
                         [
                             InlineKeyboardButton.WithCallbackData(Logic.Start),
-                            InlineKeyboardButton.WithCallbackData(Logic.Stop)
+                            InlineKeyboardButton.WithCallbackData(Logic.StopCompletely)
+                        ],
+                        [
+                            InlineKeyboardButton.WithCallbackData(Logic.StartNormalBlock),
+                            InlineKeyboardButton.WithCallbackData(Logic.StopUntilStartTime)
                         ],
                         [
                             InlineKeyboardButton.WithCallbackData(CommonItems.BackToMain)

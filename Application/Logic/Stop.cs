@@ -15,11 +15,11 @@ public class Stop
 
             if (blocker == null) return Result<Unit>.Failure("Blocker is not running");
 
-            if (!blocker.running) return Result<Unit>.Failure("Blocker is not running");
+            if (!blocker.Running) return Result<Unit>.Failure("Blocker is not running");
 
             await blocker.StopBlock();
 
-            if (blocker.running) return Result<Unit>.Failure("Failed to stop blocker");
+            if (blocker.Running) return Result<Unit>.Failure("Failed to stop blocker");
 
             return Result<Unit>.Success(Unit.Value);
         }

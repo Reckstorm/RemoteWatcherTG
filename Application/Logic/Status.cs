@@ -20,8 +20,8 @@ namespace Application.Logic
 
                 if (blocker == null) return Result<StatusDto>.Failure("Failed to check status");
 
-                status.LogicStatus = blocker.running; 
-                status.StoppedUntilStartTimeStatus = blocker.unblock;
+                status.LogicStatus = blocker.Running; 
+                status.StoppedUntilStartTimeStatus = blocker.Unblocker.Unblock;
 
                 return Result<StatusDto>.Success(status);
             }

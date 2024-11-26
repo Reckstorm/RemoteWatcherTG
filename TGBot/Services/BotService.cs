@@ -32,8 +32,17 @@ namespace TGBot.Services
             };
             _userRequest = new UserRequest();
 
-            Task.Delay(1000).Wait();
-            _botClient.SendTextMessageAsync(_configuration["BotAdminChatId"], $"Bot started {DateTime.Now.ToShortTimeString()}");
+            Task.Run(async () => {
+                try
+                {
+                    await Task.Delay(30000);
+                    await _botClient.SendTextMessageAsync(_configuration["BotAdminChatId"], $"Bot started {DateTime.Now.ToShortTimeString()}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            });
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

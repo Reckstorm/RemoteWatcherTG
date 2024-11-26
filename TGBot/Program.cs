@@ -1,4 +1,6 @@
-﻿using Application.Rules;
+﻿using System.Text.Json;
+using Application.Rules;
+using Domain;
 using MediatR;
 using TGBot.Services;
 
@@ -16,6 +18,8 @@ var services = host.Services;
 
 try
 {
+    if(string.IsNullOrEmpty(await RegistryAgent.GetUnblocker()))
+        await RegistryAgent.SetUnblocker(JsonSerializer.Serialize(new Unblocker(){ Unblock = false, UnblockDate = DateOnly.MinValue }));
     await services.GetService<IMediator>().Send(new Application.Logic.Start.Command());
 }
 catch (Exception ex)

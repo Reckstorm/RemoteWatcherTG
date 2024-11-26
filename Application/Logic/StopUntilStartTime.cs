@@ -15,7 +15,7 @@ namespace Application.Logic
 
                 await blocker.Unblock();
 
-                if (!blocker.unblock) return Result<Unit>.Failure("Failed to unblock");
+                if (!blocker.Unblocker.Unblock) return Result<Unit>.Failure("Failed to unblock");
 
                 return Result<Unit>.Success(Unit.Value);
             }
